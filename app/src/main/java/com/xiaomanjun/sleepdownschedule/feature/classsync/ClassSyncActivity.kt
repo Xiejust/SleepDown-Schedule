@@ -159,7 +159,7 @@ private fun ClassSyncScreen(
                     value = serverUrl,
                     onValueChange = { serverUrl = it },
                     label = { Text("同步服务器地址") },
-                    placeholder = { Text("https://sleepdown-class.<你的账号>.workers.dev") },
+                    placeholder = { Text("https://sleepdown-class-sync-pages.pages.dev") },
                     singleLine = true,
                     modifier = Modifier.fillMaxWidth(),
                 )
@@ -379,9 +379,14 @@ private fun ClassSyncScreen(
                                     message = null
                                     scope.launch {
                                         runCatching { manager.publish(selectedScheduleId) }
-                                            .onSuccess {
+                                            .onSuccess { outcome ->
                                                 refreshSettings()
-                                                message = "已发布课表版本 ${it.version}，同学同步后即可看到"
+                                                val version = (outcome as? PublishOutcome.Published)?.version
+                                                message = if (version != null) {
+                                                    "已发布课表版本 $version，同学同步后即可看到"
+                                                } else {
+                                                    "课表已发布，同学同步后即可看到"
+                                                }
                                             }
                                             .onFailure { message = it.message ?: "发布失败" }
                                         busy = false

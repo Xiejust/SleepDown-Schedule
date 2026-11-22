@@ -33,6 +33,29 @@ npm run deploy
 部署完成后，Wrangler 会输出类似 `https://sleepdown-class-sync.<你的子域>.workers.dev` 的地址。
 把这个地址填进 App 的「班级课表 → 同步服务器地址」。
 
+### 备选：部署到 Cloudflare Pages Functions
+
+部分网络环境下 `*.workers.dev` 会被 DNS 污染或无法直连，此时可以把同一套 API 部署成
+Cloudflare Pages Functions，并使用 `*.pages.dev` 域名。两者共用同一个 D1 数据库，数据完全互通。
+
+```bash
+cd server
+
+# 把 src/core.js、src/d1-store.js 同步到 pages/functions/lib/
+npm run sync:pages
+
+# 首次部署会创建 Pages 项目
+npm run deploy:pages
+```
+
+`server/pages/wrangler.toml` 已经绑定同一个 D1 数据库（`database_id` 与根目录 `wrangler.toml` 一致）。
+部署完成后会得到类似 `https://sleepdown-class-sync-pages.pages.dev` 的地址。
+
+> 本项目实际使用的线上地址：`https://sleepdown-class-sync-pages.pages.dev`
+>
+> - 健康检查：`GET /api/v1/health`
+> - `*.workers.dev` 在当前网络不可达，因此 App 里应填写 Pages 地址。
+
 本地联调：
 
 ```bash

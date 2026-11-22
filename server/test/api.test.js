@@ -77,6 +77,7 @@ test('创建班级、加入校验与发布/拉取课表', async () => {
   assert.equal(published.status, 200);
   const publishedBody = await published.json();
   assert.equal(publishedBody.version, 1);
+  assert.equal(publishedBody.class.memberCount, 2);
 
   const pulled = await request(store, 'GET', `/api/v1/classes/${created.code}/schedule`);
   assert.equal(pulled.status, 200);

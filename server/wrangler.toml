@@ -7,7 +7,7 @@ compatibility_date = "2025-06-01"
 [[d1_databases]]
 binding = "DB"
 database_name = "sleepdown-class-sync"
-database_id = "REPLACE_WITH_YOUR_DATABASE_ID"
+database_id = "619a82b6-30bf-4546-bdfc-1d05b4498366"
 
 [observability]
 enabled = true

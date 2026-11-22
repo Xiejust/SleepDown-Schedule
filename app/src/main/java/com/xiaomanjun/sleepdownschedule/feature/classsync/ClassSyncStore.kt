@@ -8,7 +8,7 @@ internal class ClassSyncStore(context: Context) {
         context.applicationContext.getSharedPreferences("class_sync_settings", Context.MODE_PRIVATE)
 
     fun load(): ClassSyncSettings = ClassSyncSettings(
-        serverUrl = prefs.getString(KeyServerUrl, "").orEmpty(),
+        serverUrl = prefs.getString(KeyServerUrl, "").orEmpty().ifBlank { DefaultServerUrl },
         classCode = prefs.getString(KeyClassCode, "").orEmpty(),
         className = prefs.getString(KeyClassName, "").orEmpty(),
         teacher = prefs.getString(KeyTeacher, "").orEmpty(),
@@ -66,6 +66,9 @@ internal class ClassSyncStore(context: Context) {
     }
 
     private companion object {
+        /** 默认同步服务器，可在此处改成自己的部署地址。 */
+        const val DefaultServerUrl = "https://sleepdown-class-sync-pages.pages.dev"
+
         const val KeyServerUrl = "server_url"
         const val KeyClassCode = "class_code"
         const val KeyClassName = "class_name"

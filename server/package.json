@@ -9,7 +9,9 @@
     "dev": "node dev-server.js",
     "db:local": "wrangler d1 execute sleepdown-class-sync --local --file=schema.sql",
     "db:remote": "wrangler d1 execute sleepdown-class-sync --remote --file=schema.sql",
-    "deploy": "wrangler deploy"
+    "deploy": "wrangler deploy",
+    "sync:pages": "node scripts/sync-pages.mjs",
+    "deploy:pages": "npm run sync:pages && cd pages && wrangler pages deploy dist --project-name sleepdown-class-sync-pages --branch main --commit-dirty=true"
   },
   "devDependencies": {
     "wrangler": "^4.0.0"

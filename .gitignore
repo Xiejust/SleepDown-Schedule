@@ -22,3 +22,7 @@ sleepdown_log_*.txt
 *.keystore
 /.sleepdown-secrets/
 /SleepDown-Server/
+server/node_modules/
+server/.wrangler/
+pages/.wrangler/
+.wrangler/

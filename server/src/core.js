@@ -376,6 +376,7 @@ async function publishSchedule(request, store, code) {
     scheduleUpdatedAt: now,
     updatedAt: now,
   });
+  const members = await store.listMembers(code);
   return json(200, {
     version: nextVersion,
     updatedAt: now,
@@ -383,6 +384,7 @@ async function publishSchedule(request, store, code) {
       ...auth.record,
       scheduleVersion: nextVersion,
       scheduleUpdatedAt: now,
+      memberCount: members.length,
     }),
   }, corsHeaders());
 }
