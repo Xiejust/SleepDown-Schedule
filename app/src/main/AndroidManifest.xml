@@ -164,6 +164,11 @@
             </intent-filter>
         </activity-alias>
         <activity
+            android:name=".feature.classsync.ClassSyncActivity"
+            android:exported="false"
+            android:theme="@style/AppTheme"
+            android:parentActivityName=".MainActivity" />
+        <activity
             android:name=".SettingsDetailActivity"
             android:exported="true"
             android:label="@string/backup_open_with_label"

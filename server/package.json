@@ -1,0 +1,20 @@
+{
+  "name": "sleepdown-class-sync",
+  "version": "1.0.0",
+  "private": true,
+  "type": "module",
+  "description": "SleepDown 班级课表同步后端（Cloudflare Worker + D1）",
+  "scripts": {
+    "test": "node --test test/*.test.js",
+    "dev": "node dev-server.js",
+    "db:local": "wrangler d1 execute sleepdown-class-sync --local --file=schema.sql",
+    "db:remote": "wrangler d1 execute sleepdown-class-sync --remote --file=schema.sql",
+    "deploy": "wrangler deploy"
+  },
+  "devDependencies": {
+    "wrangler": "^4.0.0"
+  },
+  "engines": {
+    "node": ">=18"
+  }
+}

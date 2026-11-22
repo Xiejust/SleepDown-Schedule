@@ -1,5 +1,6 @@
 package com.xiaomanjun.sleepdownschedule.feature.settings
 
+import android.content.Intent
 import android.provider.Settings
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
@@ -13,6 +14,7 @@ import com.xiaomanjun.sleepdownschedule.core.ui.interaction.SleepDownLazyColumn
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.rounded.Favorite
 import androidx.compose.material.icons.rounded.Feedback
+import androidx.compose.material.icons.rounded.Groups
 import androidx.compose.material.icons.rounded.SettingsBackupRestore
 import androidx.compose.material.icons.rounded.Sync
 import androidx.compose.material3.MaterialTheme
@@ -51,6 +53,7 @@ import com.xiaomanjun.sleepdownschedule.core.ui.settings.SettingsNavigationRow
 import com.xiaomanjun.sleepdownschedule.core.web.openSleepDownCustomTab
 import com.xiaomanjun.sleepdownschedule.core.web.resolveSleepDownCustomTabsPackage
 import com.xiaomanjun.sleepdownschedule.feature.home.homeSwitchGroup
+import com.xiaomanjun.sleepdownschedule.feature.classsync.ClassSyncActivity
 import com.xiaomanjun.sleepdownschedule.feature.settings.about.SleepDownReleasesUrl
 import com.xiaomanjun.sleepdownschedule.feature.update.GiteeAppUpdater
 import com.xiaomanjun.sleepdownschedule.feature.update.AppUpdateDialog
@@ -190,6 +193,17 @@ fun SettingsRootScreen(
                         badgeText = "实验功能",
                         selected = selectedPage == SettingsPage.AutoRefreshSchedule,
                         minHeight = 52.dp, onClick = { onPageChange(SettingsPage.AutoRefreshSchedule) }
+                    )
+                    SettingsDivider(startIndent = 56.dp)
+                    SettingsNavigationRow(
+                        "班级课表",
+                        leadingIcon = Icons.Rounded.Groups,
+                        leadingIconTint = ComposeColor(0xFF34C759),
+                        selected = false,
+                        minHeight = 52.dp,
+                        onClick = {
+                            context.startActivity(Intent(context, ClassSyncActivity::class.java))
+                        }
                     )
                     SettingsDivider(startIndent = 56.dp)
                     SettingsNavigationRow(

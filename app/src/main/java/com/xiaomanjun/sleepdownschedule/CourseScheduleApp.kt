@@ -117,6 +117,14 @@ class CourseScheduleApp : Application() {
                 com.xiaomanjun.sleepdownschedule.feature.backup.webdav.WebDavAutomation.checkOnForeground(this@CourseScheduleApp)
                 setTaskExcludedFromRecents(false)
                 NotificationScheduler.requestRefresh(this@CourseScheduleApp)
+                applicationScope.launch(Dispatchers.IO) {
+                    runCatching {
+                        com.xiaomanjun.sleepdownschedule.feature.classsync.ClassSyncManager(
+                            this@CourseScheduleApp,
+                            repository,
+                        ).onAppStart()
+                    }
+                }
             }
 
             override fun onStop(owner: LifecycleOwner) {
@@ -125,6 +133,15 @@ class CourseScheduleApp : Application() {
                 // desired alias immediately, then publish it only after the process is backgrounded.
                 AppIconManager.applyStoredMode(this@CourseScheduleApp)
                 if (hideFromRecentsEnabled) setTaskExcludedFromRecents(true)
+                // 管理端开启自动发布后，退到后台时把本轮修改推送到班级。
+                applicationScope.launch(Dispatchers.IO) {
+                    runCatching {
+                        com.xiaomanjun.sleepdownschedule.feature.classsync.ClassSyncManager(
+                            this@CourseScheduleApp,
+                            repository,
+                        ).autoPublishIfNeeded()
+                    }
+                }
             }
         })
         applicationScope.launch(Dispatchers.IO) {
