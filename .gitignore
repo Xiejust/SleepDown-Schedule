@@ -22,6 +22,8 @@ sleepdown_log_*.txt
 *.keystore
 /.sleepdown-secrets/
 /SleepDown-Server/
+# 写作工具的中间产物
+.writing/
 server/node_modules/
 server/.wrangler/
 pages/.wrangler/
