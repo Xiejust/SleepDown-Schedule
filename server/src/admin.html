@@ -1,0 +1,954 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="color-scheme" content="light dark">
+<meta name="robots" content="noindex, nofollow">
+<title>课表云端管理台</title>
+<style>
+  :root {
+    --bg: #f4f5f8;
+    --surface: #ffffff;
+    --surface-2: #f8f9fb;
+    --line: #e3e5ea;
+    --text: #191b21;
+    --text-2: #5d6270;
+    --text-3: #8b90a0;
+    --accent: #3a63d8;
+    --accent-soft: #e8eefe;
+    --ok: #12844c;
+    --ok-soft: #e2f5eb;
+    --warn: #a2610a;
+    --warn-soft: #fdf0dc;
+    --danger: #c0332f;
+    --danger-soft: #fbe8e7;
+    --shadow: 0 10px 30px rgba(21, 26, 40, .10);
+    --radius: 14px;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root {
+      --bg: #14161b;
+      --surface: #1c1f26;
+      --surface-2: #22262f;
+      --line: #2f343f;
+      --text: #eef0f4;
+      --text-2: #a7adbb;
+      --text-3: #767d8c;
+      --accent: #7f9dff;
+      --accent-soft: #253052;
+      --ok: #4ccd8d;
+      --ok-soft: #17352a;
+      --warn: #e3a95c;
+      --warn-soft: #3a2d17;
+      --danger: #ff8b86;
+      --danger-soft: #3d2020;
+      --shadow: 0 16px 40px rgba(0, 0, 0, .45);
+    }
+  }
+  * { box-sizing: border-box; }
+  html, body { height: 100%; }
+  body {
+    margin: 0;
+    background: var(--bg);
+    color: var(--text);
+    font: 14px/1.55 -apple-system, BlinkMacSystemFont, "Segoe UI", "PingFang SC", "Microsoft YaHei", "Noto Sans CJK SC", sans-serif;
+    -webkit-font-smoothing: antialiased;
+  }
+  button, input, select { font: inherit; color: inherit; }
+  button { cursor: pointer; }
+  a { color: var(--accent); }
+
+  .wrap { max-width: 1180px; margin: 0 auto; padding: 24px 20px 64px; }
+  .hide { display: none !important; }
+
+  /* ---------------- 登录 ---------------- */
+  .login-shell { min-height: 100vh; display: grid; place-items: center; padding: 24px; }
+  .login-card {
+    width: min(420px, 100%);
+    background: var(--surface);
+    border: 1px solid var(--line);
+    border-radius: 20px;
+    padding: 32px 28px 26px;
+    box-shadow: var(--shadow);
+  }
+  .brand { display: flex; align-items: center; gap: 12px; }
+  .brand-mark {
+    width: 40px; height: 40px; border-radius: 12px; flex: none;
+    background: linear-gradient(140deg, var(--accent), #8b6bff);
+    display: grid; place-items: center; color: #fff; font-weight: 700; font-size: 15px;
+    letter-spacing: .5px;
+  }
+  .brand h1 { margin: 0; font-size: 17px; font-weight: 650; letter-spacing: .2px; }
+  .brand p { margin: 2px 0 0; font-size: 12px; color: var(--text-3); }
+  .login-form { margin-top: 26px; display: grid; gap: 12px; }
+  .field label { display: block; font-size: 12.5px; color: var(--text-2); margin-bottom: 6px; }
+  .field input {
+    width: 100%; padding: 11px 13px; border-radius: 11px;
+    border: 1px solid var(--line); background: var(--surface-2); outline: none;
+    transition: border-color .15s, box-shadow .15s;
+  }
+  .field input:focus { border-color: var(--accent); box-shadow: 0 0 0 3px var(--accent-soft); }
+  .btn {
+    border: 1px solid var(--line); background: var(--surface); color: var(--text);
+    padding: 9px 14px; border-radius: 10px; display: inline-flex; align-items: center; gap: 7px;
+    transition: background .15s, border-color .15s, transform .08s;
+    white-space: nowrap;
+  }
+  .btn:hover { background: var(--surface-2); }
+  .btn:active { transform: scale(.985); }
+  .btn.primary { background: var(--accent); border-color: transparent; color: #fff; font-weight: 600; }
+  .btn.primary:hover { filter: brightness(1.06); }
+  .btn.danger { color: var(--danger); border-color: color-mix(in srgb, var(--danger) 35%, var(--line)); }
+  .btn.danger:hover { background: var(--danger-soft); }
+  .btn.ghost { border-color: transparent; background: transparent; color: var(--text-2); }
+  .btn.ghost:hover { background: var(--surface-2); color: var(--text); }
+  .btn[disabled] { opacity: .5; pointer-events: none; }
+  .btn.block { width: 100%; justify-content: center; padding: 11px; }
+  .hint { font-size: 12.5px; color: var(--text-3); line-height: 1.6; }
+  .hint code { background: var(--surface-2); border: 1px solid var(--line); border-radius: 6px; padding: 1px 5px; font-size: 12px; }
+  .login-status { margin-top: 16px; display: flex; align-items: center; gap: 8px; font-size: 12.5px; color: var(--text-3); }
+  .dot { width: 7px; height: 7px; border-radius: 50%; background: var(--text-3); flex: none; }
+  .dot.ok { background: var(--ok); }
+  .dot.bad { background: var(--danger); }
+
+  /* ---------------- 主界面 ---------------- */
+  header.top {
+    display: flex; align-items: center; gap: 14px; flex-wrap: wrap;
+    padding-bottom: 20px; border-bottom: 1px solid var(--line);
+  }
+  .top-title { margin-right: auto; }
+  .top-title h1 { margin: 0; font-size: 19px; font-weight: 650; }
+  .top-title p { margin: 3px 0 0; font-size: 12.5px; color: var(--text-3); }
+  .top-actions { display: flex; align-items: center; gap: 8px; }
+
+  .stats { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 12px; margin: 20px 0; }
+  .stat {
+    background: var(--surface); border: 1px solid var(--line); border-radius: var(--radius);
+    padding: 16px 16px 14px;
+  }
+  .stat .k { font-size: 12.5px; color: var(--text-2); }
+  .stat .v { margin-top: 6px; font-size: 24px; font-weight: 680; letter-spacing: -.4px; font-variant-numeric: tabular-nums; }
+  .stat .s { margin-top: 2px; font-size: 12px; color: var(--text-3); }
+
+  .toolbar { display: flex; gap: 10px; align-items: center; flex-wrap: wrap; margin-bottom: 12px; }
+  .search { position: relative; flex: 1 1 240px; min-width: 200px; }
+  .search input {
+    width: 100%; padding: 9px 12px 9px 34px; border-radius: 10px;
+    border: 1px solid var(--line); background: var(--surface); outline: none;
+  }
+  .search input:focus { border-color: var(--accent); box-shadow: 0 0 0 3px var(--accent-soft); }
+  .search svg { position: absolute; left: 11px; top: 50%; transform: translateY(-50%); color: var(--text-3); }
+  select.sort { padding: 9px 10px; border-radius: 10px; border: 1px solid var(--line); background: var(--surface); }
+
+  .chips { display: flex; gap: 6px; flex-wrap: wrap; }
+  .chip {
+    border: 1px solid var(--line); background: var(--surface); color: var(--text-2);
+    padding: 6px 11px; border-radius: 999px; font-size: 12.5px;
+  }
+  .chip[aria-pressed="true"] { background: var(--accent-soft); border-color: color-mix(in srgb, var(--accent) 35%, var(--line)); color: var(--accent); font-weight: 600; }
+
+  .panel {
+    background: var(--surface); border: 1px solid var(--line); border-radius: var(--radius);
+    overflow: hidden;
+  }
+  table { width: 100%; border-collapse: collapse; }
+  th, td { padding: 12px 14px; text-align: left; border-bottom: 1px solid var(--line); vertical-align: middle; }
+  th { font-size: 12px; font-weight: 600; color: var(--text-3); background: var(--surface-2); white-space: nowrap; }
+  tbody tr:last-child td { border-bottom: none; }
+  tbody tr:hover { background: var(--surface-2); }
+  td.num { font-variant-numeric: tabular-nums; }
+  .code {
+    font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+    font-size: 13px; letter-spacing: .6px; background: var(--surface-2);
+    border: 1px solid var(--line); border-radius: 7px; padding: 3px 7px;
+    display: inline-flex; align-items: center; gap: 6px; color: var(--text);
+  }
+  .code:hover { border-color: var(--accent); color: var(--accent); }
+  .name-cell { display: flex; flex-direction: column; gap: 2px; min-width: 160px; }
+  .name-cell b { font-weight: 600; }
+  .name-cell span { font-size: 12.5px; color: var(--text-3); }
+  .badge { display: inline-flex; align-items: center; gap: 4px; font-size: 12px; padding: 3px 8px; border-radius: 999px; border: 1px solid transparent; white-space: nowrap; }
+  .badge.ok { background: var(--ok-soft); color: var(--ok); }
+  .badge.warn { background: var(--warn-soft); color: var(--warn); }
+  .badge.mute { background: var(--surface-2); color: var(--text-3); border-color: var(--line); }
+  .row-actions { display: flex; justify-content: flex-end; gap: 4px; }
+  .muted { color: var(--text-3); }
+  .empty { padding: 56px 20px; text-align: center; color: var(--text-3); }
+  .empty b { display: block; color: var(--text-2); font-weight: 600; margin-bottom: 6px; }
+
+  /* ---------------- 详情 ---------------- */
+  dialog {
+    border: 1px solid var(--line); border-radius: 18px; padding: 0; background: var(--surface);
+    color: var(--text); width: min(760px, calc(100vw - 32px)); max-height: calc(100vh - 48px);
+    box-shadow: var(--shadow);
+  }
+  dialog::backdrop { background: rgba(10, 12, 18, .48); backdrop-filter: blur(2px); }
+  .dlg-head { display: flex; align-items: flex-start; gap: 12px; padding: 20px 22px 14px; border-bottom: 1px solid var(--line); }
+  .dlg-head h2 { margin: 0; font-size: 17px; font-weight: 650; }
+  .dlg-head p { margin: 3px 0 0; font-size: 12.5px; color: var(--text-3); }
+  .dlg-head .close { margin-left: auto; }
+  .dlg-body { padding: 18px 22px; overflow: auto; max-height: calc(100vh - 200px); }
+  .dlg-foot { padding: 14px 22px; border-top: 1px solid var(--line); display: flex; gap: 8px; justify-content: flex-end; flex-wrap: wrap; background: var(--surface-2); }
+  .grid2 { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 12px; }
+  .kv { background: var(--surface-2); border: 1px solid var(--line); border-radius: 11px; padding: 11px 13px; }
+  .kv .k { font-size: 12px; color: var(--text-3); }
+  .kv .v { margin-top: 3px; font-weight: 600; font-variant-numeric: tabular-nums; word-break: break-all; }
+  h3.section { font-size: 13px; font-weight: 650; color: var(--text-2); margin: 20px 0 10px; letter-spacing: .2px; }
+  h3.section:first-child { margin-top: 0; }
+  .member-list { border: 1px solid var(--line); border-radius: 11px; overflow: hidden; max-height: 240px; overflow-y: auto; }
+  .member-list table { font-size: 13px; }
+  .member-list th, .member-list td { padding: 9px 12px; }
+  .member-list th { position: sticky; top: 0; z-index: 1; }
+  .edit-box { margin-top: 10px; border: 1px dashed var(--line); border-radius: 11px; padding: 14px; display: grid; gap: 10px; }
+  .edit-row { display: grid; grid-template-columns: 110px 1fr; gap: 10px; align-items: center; }
+  .edit-row input[type=text], .edit-row input[type=password] {
+    width: 100%; padding: 8px 11px; border-radius: 9px; border: 1px solid var(--line); background: var(--surface); outline: none;
+  }
+  .edit-row input:focus { border-color: var(--accent); box-shadow: 0 0 0 3px var(--accent-soft); }
+  .checkbox { display: flex; align-items: center; gap: 8px; font-size: 13px; color: var(--text-2); }
+  .danger-zone { margin-top: 18px; border: 1px solid color-mix(in srgb, var(--danger) 30%, var(--line)); background: var(--danger-soft); border-radius: 11px; padding: 14px; }
+  .danger-zone h4 { margin: 0 0 4px; font-size: 13px; color: var(--danger); }
+  .danger-zone p { margin: 0 0 10px; font-size: 12.5px; color: var(--text-2); }
+  .danger-zone input { padding: 8px 11px; border-radius: 9px; border: 1px solid var(--line); background: var(--surface); outline: none; min-width: 200px; }
+  .mono { font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace; }
+
+  /* ---------------- 提示 ---------------- */
+  .toasts { position: fixed; right: 20px; bottom: 20px; display: grid; gap: 8px; z-index: 60; max-width: min(380px, calc(100vw - 40px)); }
+  .toast {
+    background: var(--surface); border: 1px solid var(--line); border-left: 3px solid var(--accent);
+    border-radius: 10px; padding: 11px 14px; box-shadow: var(--shadow); font-size: 13px;
+    animation: toast-in .18s ease-out;
+  }
+  .toast.ok { border-left-color: var(--ok); }
+  .toast.bad { border-left-color: var(--danger); }
+  @keyframes toast-in { from { opacity: 0; transform: translateY(6px); } to { opacity: 1; transform: none; } }
+
+  .spinner { width: 14px; height: 14px; border: 2px solid var(--line); border-top-color: var(--accent); border-radius: 50%; animation: spin .7s linear infinite; }
+  @keyframes spin { to { transform: rotate(360deg); } }
+  .loading { display: flex; align-items: center; justify-content: center; gap: 10px; padding: 40px; color: var(--text-3); }
+
+  footer.foot { margin-top: 28px; font-size: 12px; color: var(--text-3); display: flex; gap: 14px; flex-wrap: wrap; }
+
+  @media (max-width: 860px) {
+    .stats { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+    table thead { display: none; }
+    table, tbody, tr, td { display: block; width: 100%; }
+    tbody tr { padding: 12px 14px 14px; border-bottom: 1px solid var(--line); }
+    tbody tr:last-child { border-bottom: none; }
+    td { border: none; padding: 5px 0; display: flex; gap: 12px; align-items: flex-start; }
+    td::before { content: attr(data-label); flex: none; width: 76px; font-size: 12px; color: var(--text-3); padding-top: 1px; }
+    td .name-cell { min-width: 0; }
+    td.actions-cell { justify-content: flex-end; padding-top: 10px; }
+    .row-actions { width: 100%; justify-content: flex-end; }
+    .row-actions .btn { flex: 1 1 auto; justify-content: center; }
+    .grid2 { grid-template-columns: 1fr; }
+    .dlg-body { max-height: calc(100vh - 190px); }
+    .dlg-foot { justify-content: stretch; }
+    .dlg-foot .btn { flex: 1 1 auto; justify-content: center; }
+    .edit-row { grid-template-columns: 1fr; gap: 6px; }
+    .danger-zone input { min-width: 0; flex: 1 1 140px; }
+  }
+</style>
+</head>
+<body>
+
+<!-- ================= 登录 ================= -->
+<div class="login-shell" id="loginView">
+  <div class="login-card">
+    <div class="brand">
+      <div class="brand-mark">AH</div>
+      <div>
+        <h1>课表云端管理台</h1>
+        <p>SleepDown 班级同步服务</p>
+      </div>
+    </div>
+    <form class="login-form" id="loginForm" autocomplete="on">
+      <div class="field">
+        <label for="password">管理员密码</label>
+        <input id="password" name="password" type="password" autocomplete="current-password"
+               placeholder="服务端 ADMIN_KEY" required autofocus>
+      </div>
+      <button class="btn primary block" type="submit" id="loginBtn">登录</button>
+      <p class="hint" id="loginHint">密码来自服务端环境变量 <code>ADMIN_KEY</code>，只用于换取 12 小时会话令牌，不会保存在浏览器之外。</p>
+    </form>
+    <div class="login-status"><span class="dot" id="healthDot"></span><span id="healthText">正在检测服务状态…</span></div>
+  </div>
+</div>
+
+<!-- ================= 主界面 ================= -->
+<div class="wrap hide" id="appView">
+  <header class="top">
+    <div class="brand-mark" aria-hidden="true">AH</div>
+    <div class="top-title">
+      <h1>课表云端管理台</h1>
+      <p id="sessionInfo">已登录</p>
+    </div>
+    <div class="top-actions">
+      <span class="badge mute" id="refreshBadge">自动刷新 30s</span>
+      <button class="btn" id="refreshBtn" type="button">刷新</button>
+      <button class="btn ghost" id="logoutBtn" type="button">退出</button>
+    </div>
+  </header>
+
+  <section class="stats" aria-label="总览">
+    <div class="stat"><div class="k">班级总数</div><div class="v" id="statClasses">—</div><div class="s" id="statClassesSub">—</div></div>
+    <div class="stat"><div class="k">已发布课表</div><div class="v" id="statPublished">—</div><div class="s" id="statPublishedSub">—</div></div>
+    <div class="stat"><div class="k">成员总数</div><div class="v" id="statMembers">—</div><div class="s">去重后的班级成员</div></div>
+    <div class="stat"><div class="k">最近更新</div><div class="v" id="statLatest" style="font-size:16px">—</div><div class="s" id="statLatestSub">—</div></div>
+  </section>
+
+  <div class="toolbar">
+    <div class="search">
+      <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true">
+        <circle cx="11" cy="11" r="7"></circle><path d="m20 20-3.2-3.2"></path>
+      </svg>
+      <input id="searchInput" type="search" placeholder="搜索班级号、班级名或老师" aria-label="搜索班级">
+    </div>
+    <div class="chips" id="filterChips" role="group" aria-label="筛选">
+      <button class="chip" type="button" data-filter="all" aria-pressed="true">全部</button>
+      <button class="chip" type="button" data-filter="published" aria-pressed="false">已发布</button>
+      <button class="chip" type="button" data-filter="empty" aria-pressed="false">未发布</button>
+      <button class="chip" type="button" data-filter="locked" aria-pressed="false">有加入口令</button>
+    </div>
+    <select class="sort" id="sortSelect" aria-label="排序">
+      <option value="created">创建时间（新 → 旧）</option>
+      <option value="updated">最近更新</option>
+      <option value="members">成员数</option>
+      <option value="code">班级号</option>
+    </select>
+  </div>
+
+  <div class="panel">
+    <table id="classTable">
+      <thead>
+        <tr>
+          <th>班级号</th>
+          <th>班级</th>
+          <th>成员</th>
+          <th>课表</th>
+          <th>最后更新</th>
+          <th style="text-align:right">操作</th>
+        </tr>
+      </thead>
+      <tbody id="classBody"></tbody>
+    </table>
+    <div class="loading hide" id="listLoading"><span class="spinner"></span>正在加载班级列表…</div>
+    <div class="empty hide" id="listEmpty">
+      <b>还没有班级</b>
+      在 App 的「设置 → 班级课表」里创建班级并发布课表后，这里就会出现。
+    </div>
+  </div>
+
+  <footer class="foot">
+    <span>数据源：Cloudflare D1</span>
+    <span>删除班级会同时删除其成员记录，且不可恢复</span>
+    <span id="footServer"></span>
+  </footer>
+</div>
+
+<!-- ================= 详情弹窗 ================= -->
+<dialog id="detailDialog" aria-labelledby="detailTitle">
+  <div class="dlg-head">
+    <div>
+      <h2 id="detailTitle">班级详情</h2>
+      <p id="detailSub"></p>
+    </div>
+    <button class="btn ghost close" type="button" id="detailClose" aria-label="关闭">关闭</button>
+  </div>
+  <div class="dlg-body" id="detailBody"></div>
+  <div class="dlg-foot">
+    <button class="btn" type="button" id="copyCodeBtn">复制班级号</button>
+    <button class="btn" type="button" id="exportBtn">导出课表 JSON</button>
+    <button class="btn" type="button" id="editBtn">编辑信息</button>
+    <button class="btn danger" type="button" id="deleteBtn">删除班级</button>
+  </div>
+</dialog>
+
+<div class="toasts" id="toasts" aria-live="polite"></div>
+
+<script>
+(() => {
+  'use strict';
+
+  const API = '/api/v1';
+  const TOKEN_KEY = 'sleepdown.admin.session';
+  const REFRESH_MS = 30000;
+
+  const state = {
+    token: null,
+    expiresAt: 0,
+    classes: [],
+    filter: 'all',
+    query: '',
+    sort: 'created',
+    loading: false,
+    timer: null,
+    detailCode: null,
+  };
+
+  const $ = (id) => document.getElementById(id);
+  const esc = (value) => String(value ?? '')
+    .replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;')
+    .replace(/"/g, '&quot;').replace(/'/g, '&#39;');
+
+  /* ---------------- 工具 ---------------- */
+
+  function pad(n) { return String(n).padStart(2, '0'); }
+
+  function formatTime(ms) {
+    if (!ms) return '—';
+    const d = new Date(Number(ms));
+    if (Number.isNaN(d.getTime())) return '—';
+    return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())} ${pad(d.getHours())}:${pad(d.getMinutes())}`;
+  }
+
+  function formatRelative(ms) {
+    if (!ms) return '—';
+    const diff = Date.now() - Number(ms);
+    if (diff < 0) return formatTime(ms);
+    if (diff < 60e3) return '刚刚';
+    if (diff < 3600e3) return `${Math.floor(diff / 60e3)} 分钟前`;
+    if (diff < 86400e3) return `${Math.floor(diff / 3600e3)} 小时前`;
+    if (diff < 30 * 86400e3) return `${Math.floor(diff / 86400e3)} 天前`;
+    return formatTime(ms);
+  }
+
+  function formatBytes(bytes) {
+    const n = Number(bytes) || 0;
+    if (n < 1024) return `${n} B`;
+    if (n < 1024 * 1024) return `${(n / 1024).toFixed(1)} KB`;
+    return `${(n / 1024 / 1024).toFixed(2)} MB`;
+  }
+
+  function toast(message, kind = '') {
+    const el = document.createElement('div');
+    el.className = `toast ${kind}`;
+    el.textContent = message;
+    $('toasts').appendChild(el);
+    setTimeout(() => {
+      el.style.transition = 'opacity .2s, transform .2s';
+      el.style.opacity = '0';
+      el.style.transform = 'translateY(4px)';
+      setTimeout(() => el.remove(), 220);
+    }, 2600);
+  }
+
+  async function api(path, { method = 'GET', body, auth = true } = {}) {
+    const headers = {};
+    if (body !== undefined) headers['Content-Type'] = 'application/json';
+    if (auth && state.token) headers.Authorization = `Bearer ${state.token}`;
+    let response;
+    try {
+      response = await fetch(`${API}${path}`, {
+        method,
+        headers,
+        body: body === undefined ? undefined : JSON.stringify(body),
+        cache: 'no-store',
+      });
+    } catch (error) {
+      throw new Error('网络请求失败，请检查服务地址或网络');
+    }
+    const text = await response.text();
+    let data = null;
+    if (text) {
+      try { data = JSON.parse(text); } catch { data = null; }
+    }
+    if (!response.ok) {
+      if (response.status === 401 && auth) {
+        clearSession();
+        showLogin(data?.message ?? '登录已过期，请重新登录');
+      }
+      const err = new Error(data?.message || `请求失败（HTTP ${response.status}）`);
+      err.status = response.status;
+      err.code = data?.error;
+      throw err;
+    }
+    return data;
+  }
+
+  /* ---------------- 会话 ---------------- */
+
+  function saveSession(token, expiresAt) {
+    state.token = token;
+    state.expiresAt = expiresAt;
+    try {
+      sessionStorage.setItem(TOKEN_KEY, JSON.stringify({ token, expiresAt }));
+    } catch { /* 隐私模式下忽略 */ }
+  }
+
+  function restoreSession() {
+    try {
+      const raw = sessionStorage.getItem(TOKEN_KEY);
+      if (!raw) return false;
+      const saved = JSON.parse(raw);
+      if (!saved?.token || !saved?.expiresAt || saved.expiresAt <= Date.now()) return false;
+      state.token = saved.token;
+      state.expiresAt = saved.expiresAt;
+      return true;
+    } catch {
+      return false;
+    }
+  }
+
+  function clearSession() {
+    state.token = null;
+    state.expiresAt = 0;
+    try { sessionStorage.removeItem(TOKEN_KEY); } catch { /* ignore */ }
+    stopAutoRefresh();
+  }
+
+  /* ---------------- 界面切换 ---------------- */
+
+  function showLogin(message) {
+    $('appView').classList.add('hide');
+    $('loginView').classList.remove('hide');
+    $('loginHint').textContent = message
+      || '密码来自服务端环境变量 ADMIN_KEY，只用于换取 12 小时会话令牌。';
+    $('password').value = '';
+    setTimeout(() => $('password').focus(), 30);
+  }
+
+  function showApp() {
+    $('loginView').classList.add('hide');
+    $('appView').classList.remove('hide');
+    const remaining = Math.max(0, Math.round((state.expiresAt - Date.now()) / 60000));
+    $('sessionInfo').textContent = `已登录 · 会话剩余约 ${remaining} 分钟`;
+    loadClasses({ silent: true });
+    startAutoRefresh();
+  }
+
+  async function checkHealth() {
+    const dot = $('healthDot');
+    const text = $('healthText');
+    try {
+      const response = await fetch(`${API}/health`, { cache: 'no-store' });
+      const data = await response.json();
+      if (response.ok && data?.ok) {
+        dot.className = 'dot ok';
+        text.textContent = `服务正常 · ${new URL(location.href).host}`;
+        return;
+      }
+      throw new Error('bad');
+    } catch {
+      dot.className = 'dot bad';
+      text.textContent = '服务不可达，请检查部署地址或 D1 绑定';
+    }
+  }
+
+  /* ---------------- 列表 ---------------- */
+
+  function computeStats(classes) {
+    const total = classes.length;
+    const published = classes.filter((c) => c.hasSchedule).length;
+    const members = classes.reduce((sum, c) => sum + (c.memberCount || 0), 0);
+    const latest = classes.reduce((max, c) => Math.max(max, c.scheduleUpdatedAt || 0), 0);
+    $('statClasses').textContent = total;
+    $('statClassesSub').textContent = total ? `已发布 ${published} 个` : '暂无数据';
+    $('statPublished').textContent = published;
+    $('statPublishedSub').textContent = total ? `${Math.round((published / total) * 100)}% 的班级有课表` : '—';
+    $('statMembers').textContent = members;
+    $('statLatest').textContent = latest ? formatRelative(latest) : '—';
+    $('statLatestSub').textContent = latest ? formatTime(latest) : '还没有发布记录';
+  }
+
+  function visibleClasses() {
+    const query = state.query.trim().toLowerCase();
+    let list = state.classes.filter((item) => {
+      if (state.filter === 'published' && !item.hasSchedule) return false;
+      if (state.filter === 'empty' && item.hasSchedule) return false;
+      if (state.filter === 'locked' && !item.joinPasswordRequired) return false;
+      if (!query) return true;
+      return [item.displayCode, item.code, item.name, item.teacher]
+        .some((value) => String(value ?? '').toLowerCase().includes(query));
+    });
+    const by = state.sort;
+    list = [...list].sort((a, b) => {
+      if (by === 'members') return (b.memberCount || 0) - (a.memberCount || 0);
+      if (by === 'updated') return (b.scheduleUpdatedAt || b.updatedAt || 0) - (a.scheduleUpdatedAt || a.updatedAt || 0);
+      if (by === 'code') return String(a.code).localeCompare(String(b.code));
+      return (b.createdAt || 0) - (a.createdAt || 0);
+    });
+    return list;
+  }
+
+  function render() {
+    const rows = visibleClasses();
+    const body = $('classBody');
+    body.innerHTML = '';
+    $('listEmpty').classList.toggle('hide', rows.length > 0 || state.loading);
+    if (!rows.length && !state.loading) {
+      $('listEmpty').querySelector('b').textContent =
+        state.classes.length ? '没有符合条件的班级' : '还没有班级';
+    }
+    for (const item of rows) {
+      const tr = document.createElement('tr');
+      const published = item.hasSchedule;
+      const scheduleCell = published
+        ? `<span class="badge ok">v${esc(item.scheduleVersion)}</span>
+           <span class="muted" style="font-size:12px">${formatBytes(item.payloadBytes)}</span>`
+        : '<span class="badge warn">未发布</span>';
+      const lock = item.joinPasswordRequired
+        ? '<span class="badge mute" title="加入需要口令">口令</span>'
+        : '';
+      tr.innerHTML = `
+        <td data-label="班级号"><button class="code" type="button" data-copy="${esc(item.displayCode)}" title="点击复制">${esc(item.displayCode)}</button></td>
+        <td data-label="班级">
+          <div class="name-cell">
+            <b>${esc(item.name)}</b>
+            <span>${esc(item.teacher || '未填写老师')} ${lock}</span>
+          </div>
+        </td>
+        <td data-label="成员" class="num">${esc(item.memberCount)}</td>
+        <td data-label="课表">${scheduleCell}</td>
+        <td data-label="最后更新">
+          <div>${item.scheduleUpdatedAt ? esc(formatRelative(item.scheduleUpdatedAt)) : '<span class="muted">从未发布</span>'}</div>
+          <div class="muted" style="font-size:12px">${item.scheduleUpdatedAt ? esc(formatTime(item.scheduleUpdatedAt)) : ''}</div>
+        </td>
+        <td data-label="操作" class="actions-cell">
+          <div class="row-actions">
+            <button class="btn" type="button" data-open="${esc(item.code)}">管理</button>
+          </div>
+        </td>`;
+      body.appendChild(tr);
+    }
+  }
+
+  async function loadClasses({ silent = false } = {}) {
+    if (state.loading) return;
+    state.loading = true;
+    if (!silent) $('listLoading').classList.remove('hide');
+    try {
+      const data = await api('/admin/classes');
+      state.classes = Array.isArray(data?.classes) ? data.classes : [];
+      computeStats(state.classes);
+      render();
+      if (!silent) {
+        const stamp = new Date();
+        $('footServer').textContent = `最近刷新 ${pad(stamp.getHours())}:${pad(stamp.getMinutes())}:${pad(stamp.getSeconds())}`;
+      }
+    } catch (error) {
+      if (error.status !== 401) {
+        toast(error.message, 'bad');
+        if (!state.classes.length) {
+          $('listEmpty').classList.remove('hide');
+          $('listEmpty').querySelector('b').textContent = '加载失败';
+        }
+      }
+    } finally {
+      state.loading = false;
+      $('listLoading').classList.add('hide');
+    }
+  }
+
+  /* ---------------- 详情 ---------------- */
+
+  function openDetail(code) {
+    state.detailCode = code;
+    const item = state.classes.find((c) => c.code === code);
+    $('detailTitle').textContent = item ? item.name : '班级详情';
+    $('detailSub').textContent = item ? `${item.displayCode} · ${item.teacher || '未填写老师'}` : '';
+    $('detailBody').innerHTML = '<div class="loading"><span class="spinner"></span>正在加载详情…</div>';
+    $('detailDialog').showModal();
+    loadDetail(code);
+  }
+
+  async function loadDetail(code) {
+    try {
+      const data = await api(`/admin/classes/${encodeURIComponent(code)}`);
+      if (state.detailCode !== code) return;
+      renderDetail(data);
+    } catch (error) {
+      if (error.status !== 401) {
+        $('detailBody').innerHTML = `<div class="empty"><b>加载失败</b>${esc(error.message)}</div>`;
+      }
+    }
+  }
+
+  function renderDetail(data) {
+    const info = data?.class ?? {};
+    const members = Array.isArray(data?.members) ? data.members : [];
+    const schedule = data?.schedule ?? null;
+    $('detailTitle').textContent = info.name || '班级详情';
+    $('detailSub').textContent = `${info.displayCode || ''} · ${info.teacher || '未填写老师'}`;
+
+    const scheduleBlock = schedule
+      ? `<div class="grid2">
+           <div class="kv"><div class="k">课表版本</div><div class="v">v${esc(info.scheduleVersion)}</div></div>
+           <div class="kv"><div class="k">课表大小</div><div class="v">${esc(formatBytes(schedule.bytes))}</div></div>
+           <div class="kv"><div class="k">课程数量</div><div class="v">${esc(schedule.courses)} 门</div></div>
+           <div class="kv"><div class="k">节次数量</div><div class="v">${esc(schedule.timeSlots)} 节</div></div>
+           <div class="kv"><div class="k">总周数</div><div class="v">${schedule.totalWeeks ? `${esc(schedule.totalWeeks)} 周` : '—'}</div></div>
+           <div class="kv"><div class="k">开学日期</div><div class="v">${esc(schedule.termStartDate || '—')}</div></div>
+         </div>`
+      : '<div class="kv"><div class="k">课表状态</div><div class="v" style="color:var(--warn)">尚未发布过课表</div></div>';
+
+    const memberRows = members.length
+      ? members.map((m) => `
+          <tr>
+            <td>${esc(m.nickname || '未命名')}</td>
+            <td>${m.role === 'admin' ? '<span class="badge ok">管理员</span>' : '<span class="badge mute">成员</span>'}</td>
+            <td class="mono" style="font-size:12px">${esc(formatTime(m.joinedAt))}</td>
+            <td>${esc(formatRelative(m.lastSeenAt))}</td>
+          </tr>`).join('')
+      : '<tr><td colspan="4" class="muted" style="padding:16px">暂无成员</td></tr>';
+
+    $('detailBody').innerHTML = `
+      <h3 class="section">基本信息</h3>
+      <div class="grid2">
+        <div class="kv"><div class="k">班级号</div><div class="v mono">${esc(info.displayCode)}</div></div>
+        <div class="kv"><div class="k">加入口令</div><div class="v">${info.joinPasswordRequired ? '已设置' : '无'}</div></div>
+        <div class="kv"><div class="k">创建时间</div><div class="v">${esc(formatTime(info.createdAt))}</div></div>
+        <div class="kv"><div class="k">成员数量</div><div class="v">${esc(info.memberCount)} 人</div></div>
+      </div>
+
+      <h3 class="section">已发布课表</h3>
+      ${scheduleBlock}
+
+      <h3 class="section">成员（${members.length}）</h3>
+      <div class="member-list">
+        <table>
+          <thead><tr><th>昵称</th><th>角色</th><th>加入时间</th><th>最近活跃</th></tr></thead>
+          <tbody>${memberRows}</tbody>
+        </table>
+      </div>
+
+      <div id="editSlot"></div>
+
+      <div class="danger-zone">
+        <h4>删除班级</h4>
+        <p>会删除该班级、成员记录与已发布课表，且无法恢复。请输入班级号 <span class="mono">${esc(info.displayCode)}</span> 以确认。</p>
+        <div style="display:flex;gap:8px;flex-wrap:wrap">
+          <input id="deleteConfirmInput" type="text" placeholder="${esc(info.displayCode)}" autocomplete="off">
+          <button class="btn danger" type="button" id="confirmDeleteBtn" disabled>永久删除</button>
+        </div>
+      </div>`;
+
+    $('exportBtn').disabled = !schedule;
+    $('editBtn').dataset.editing = 'false';
+    bindDetailActions(info);
+  }
+
+  function bindDetailActions(info) {
+    const input = $('deleteConfirmInput');
+    const confirmBtn = $('confirmDeleteBtn');
+    input?.addEventListener('input', () => {
+      confirmBtn.disabled = input.value.trim().toUpperCase() !== String(info.displayCode).toUpperCase();
+    });
+    confirmBtn?.addEventListener('click', () => deleteClass(info));
+  }
+
+  function renderEditForm(info) {
+    const slot = $('editSlot');
+    if (!slot) return;
+    slot.innerHTML = `
+      <h3 class="section">编辑信息</h3>
+      <div class="edit-box">
+        <div class="edit-row"><label for="editName">班级名称</label><input id="editName" type="text" maxlength="40" value="${esc(info.name)}"></div>
+        <div class="edit-row"><label for="editTeacher">老师</label><input id="editTeacher" type="text" maxlength="40" value="${esc(info.teacher || '')}"></div>
+        <div class="edit-row"><label for="editPassword">加入口令</label><input id="editPassword" type="password" maxlength="64" placeholder="留空则保持不变"></div>
+        <label class="checkbox"><input id="clearPassword" type="checkbox"> 清除加入口令（任何人可加入）</label>
+        <div style="display:flex;gap:8px;justify-content:flex-end">
+          <button class="btn ghost" type="button" id="cancelEditBtn">取消</button>
+          <button class="btn primary" type="button" id="saveEditBtn">保存</button>
+        </div>
+      </div>`;
+    $('cancelEditBtn').addEventListener('click', () => { slot.innerHTML = ''; $('editBtn').dataset.editing = 'false'; });
+    $('saveEditBtn').addEventListener('click', async () => {
+      const body = {};
+      const name = $('editName').value.trim();
+      const teacher = $('editTeacher').value.trim();
+      const password = $('editPassword').value;
+      if (!name) { toast('班级名称不能为空', 'bad'); return; }
+      body.name = name;
+      body.teacher = teacher;
+      if ($('clearPassword').checked) body.joinPassword = '';
+      else if (password) body.joinPassword = password;
+      const btn = $('saveEditBtn');
+      btn.disabled = true;
+      try {
+        const data = await api(`/admin/classes/${encodeURIComponent(state.detailCode)}`, { method: 'PATCH', body });
+        toast('已保存', 'ok');
+        slot.innerHTML = '';
+        $('editBtn').dataset.editing = 'false';
+        await loadClasses({ silent: true });
+        const updated = state.classes.find((c) => c.code === state.detailCode);
+        if (updated) {
+          $('detailTitle').textContent = updated.name;
+          $('detailSub').textContent = `${updated.displayCode} · ${updated.teacher || '未填写老师'}`;
+        }
+        if (data?.class) renderDetail({ class: data.class, members: [], schedule: null });
+        loadDetail(state.detailCode);
+      } catch (error) {
+        if (error.status !== 401) toast(error.message, 'bad');
+      } finally {
+        btn.disabled = false;
+      }
+    });
+  }
+
+  async function deleteClass(info) {
+    const btn = $('confirmDeleteBtn');
+    if (btn) btn.disabled = true;
+    try {
+      await api(`/admin/classes/${encodeURIComponent(info.code)}`, { method: 'DELETE' });
+      toast(`已删除 ${info.displayCode}`, 'ok');
+      $('detailDialog').close();
+      await loadClasses({ silent: true });
+    } catch (error) {
+      if (error.status !== 401) toast(error.message, 'bad');
+      if (btn) btn.disabled = false;
+    }
+  }
+
+  async function copyText(text) {
+    try {
+      await navigator.clipboard.writeText(text);
+      toast(`已复制 ${text}`, 'ok');
+    } catch {
+      const area = document.createElement('textarea');
+      area.value = text;
+      area.style.position = 'fixed';
+      area.style.opacity = '0';
+      document.body.appendChild(area);
+      area.select();
+      try { document.execCommand('copy'); toast(`已复制 ${text}`, 'ok'); }
+      catch { toast('复制失败，请手动选择', 'bad'); }
+      area.remove();
+    }
+  }
+
+  /* ---------------- 自动刷新 ---------------- */
+
+  function startAutoRefresh() {
+    stopAutoRefresh();
+    state.timer = setInterval(() => {
+      if (document.visibilityState === 'visible' && state.token) loadClasses({ silent: true });
+    }, REFRESH_MS);
+  }
+
+  function stopAutoRefresh() {
+    if (state.timer) clearInterval(state.timer);
+    state.timer = null;
+  }
+
+  /* ---------------- 事件绑定 ---------------- */
+
+  $('loginForm').addEventListener('submit', async (event) => {
+    event.preventDefault();
+    const btn = $('loginBtn');
+    const password = $('password').value;
+    if (!password) { toast('请输入管理员密码', 'bad'); return; }
+    btn.disabled = true;
+    btn.textContent = '登录中…';
+    try {
+      const data = await api('/admin/login', { method: 'POST', body: { password }, auth: false });
+      saveSession(data.token, data.expiresAt);
+      toast('登录成功', 'ok');
+      showApp();
+    } catch (error) {
+      const hint = error.code === 'admin_not_configured'
+        ? '服务端还没有配置 ADMIN_KEY，请先在 Cloudflare 执行：npx wrangler secret put ADMIN_KEY'
+        : error.message;
+      showLogin(hint);
+      toast(error.message, 'bad');
+    } finally {
+      btn.disabled = false;
+      btn.textContent = '登录';
+    }
+  });
+
+  $('refreshBtn').addEventListener('click', () => loadClasses());
+  $('logoutBtn').addEventListener('click', () => {
+    clearSession();
+    showLogin('已退出。');
+  });
+
+  $('searchInput').addEventListener('input', (event) => {
+    state.query = event.target.value;
+    render();
+  });
+
+  $('filterChips').addEventListener('click', (event) => {
+    const chip = event.target.closest('.chip');
+    if (!chip) return;
+    state.filter = chip.dataset.filter;
+    for (const item of $('filterChips').querySelectorAll('.chip')) {
+      item.setAttribute('aria-pressed', String(item === chip));
+    }
+    render();
+  });
+
+  $('sortSelect').addEventListener('change', (event) => {
+    state.sort = event.target.value;
+    render();
+  });
+
+  $('classBody').addEventListener('click', (event) => {
+    const copy = event.target.closest('[data-copy]');
+    if (copy) { copyText(copy.dataset.copy); return; }
+    const open = event.target.closest('[data-open]');
+    if (open) openDetail(open.dataset.open);
+  });
+
+  $('detailClose').addEventListener('click', () => $('detailDialog').close());
+  $('detailDialog').addEventListener('close', () => { state.detailCode = null; });
+
+  $('copyCodeBtn').addEventListener('click', () => {
+    const item = state.classes.find((c) => c.code === state.detailCode);
+    if (item) copyText(item.displayCode);
+  });
+
+  $('editBtn').addEventListener('click', () => {
+    const item = state.classes.find((c) => c.code === state.detailCode);
+    if (!item) return;
+    const slot = $('editSlot');
+    if (slot && slot.innerHTML.trim()) { slot.innerHTML = ''; return; }
+    renderEditForm(item);
+    $('editSlot')?.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+  });
+
+  $('exportBtn').addEventListener('click', async () => {
+    const code = state.detailCode;
+    if (!code) return;
+    const btn = $('exportBtn');
+    btn.disabled = true;
+    try {
+      const data = await api(`/admin/classes/${encodeURIComponent(code)}/schedule`);
+      const item = state.classes.find((c) => c.code === code);
+      const blob = new Blob([data.payload], { type: 'application/json;charset=utf-8' });
+      const url = URL.createObjectURL(blob);
+      const link = document.createElement('a');
+      link.href = url;
+      link.download = `${item?.displayCode ?? code}-${item?.name ?? 'schedule'}.json`;
+      document.body.appendChild(link);
+      link.click();
+      link.remove();
+      setTimeout(() => URL.revokeObjectURL(url), 2000);
+      toast('已导出课表 JSON', 'ok');
+    } catch (error) {
+      if (error.status !== 401) toast(error.message, 'bad');
+    } finally {
+      btn.disabled = false;
+    }
+  });
+
+  $('deleteBtn').addEventListener('click', () => {
+    const zone = document.querySelector('.danger-zone');
+    zone?.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+    $('deleteConfirmInput')?.focus();
+  });
+
+  document.addEventListener('visibilitychange', () => {
+    if (document.visibilityState === 'visible' && state.token) loadClasses({ silent: true });
+  });
+
+  /* ---------------- 启动 ---------------- */
+
+  checkHealth();
+  if (restoreSession()) showApp();
+  else showLogin();
+})();
+</script>
+</body>
+</html>

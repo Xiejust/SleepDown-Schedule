@@ -186,3 +186,115 @@ test('同一成员重复加入不会重复计数', async () => {
   });
   assert.equal((await second.json()).class.memberCount, 2);
 });
+
+/* ------------------------------------------------------------ 管理台接口 */
+
+const ADMIN_ENV = { ADMIN_KEY: 'test-admin-key' };
+
+function adminRequest(store, method, path, { body, token, env = ADMIN_ENV } = {}) {
+  const headers = { 'Content-Type': 'application/json' };
+  if (token) headers.Authorization = `Bearer ${token}`;
+  return handleRequest(new Request(`https://class.example.com${path}`, {
+    method,
+    headers,
+    body: body == null ? undefined : JSON.stringify(body),
+  }), store, env);
+}
+
+test('管理台登录、列表、详情、修改与删除', async () => {
+  const store = new MemoryStore();
+  const created = await createClass(store, '1234');
+  await request(store, 'PUT', `/api/v1/classes/${created.code}/schedule`, {
+    token: created.adminToken,
+    body: { payload },
+  });
+  await request(store, 'POST', `/api/v1/classes/${created.code}/join`, {
+    body: { nickname: '小红', password: '1234' },
+  });
+
+  const wrong = await adminRequest(store, 'POST', '/api/v1/admin/login', {
+    body: { password: 'wrong-password' },
+  });
+  assert.equal(wrong.status, 401);
+
+  const login = await adminRequest(store, 'POST', '/api/v1/admin/login', {
+    body: { password: 'test-admin-key' },
+  });
+  assert.equal(login.status, 200);
+  const session = await login.json();
+  assert.ok(session.token.includes('.'));
+  assert.ok(session.expiresAt > Date.now());
+
+  const unauthenticated = await adminRequest(store, 'GET', '/api/v1/admin/classes');
+  assert.equal(unauthenticated.status, 401);
+
+  const expired = await adminRequest(store, 'GET', '/api/v1/admin/classes', {
+    token: `${Date.now() - 1000}.deadbeef`,
+  });
+  assert.equal(expired.status, 401);
+
+  const list = await adminRequest(store, 'GET', '/api/v1/admin/classes', { token: session.token });
+  assert.equal(list.status, 200);
+  const listBody = await list.json();
+  assert.equal(listBody.total, 1);
+  const summary = listBody.classes[0];
+  assert.equal(summary.code, created.code);
+  assert.equal(summary.hasSchedule, true);
+  assert.equal(summary.memberCount, 2);
+  assert.ok(summary.payloadBytes > 0);
+  assert.equal(summary.adminTokenHash, undefined);
+  assert.equal(summary.joinPasswordHash, undefined);
+
+  const detail = await adminRequest(store, 'GET', `/api/v1/admin/classes/${created.code}`, {
+    token: session.token,
+  });
+  const detailBody = await detail.json();
+  assert.equal(detailBody.members.length, 2);
+  assert.equal(detailBody.schedule.courses, 1);
+  assert.equal(detailBody.schedule.timeSlots, 2);
+  assert.ok(detailBody.schedule.bytes > 0);
+
+  const schedule = await adminRequest(store, 'GET', `/api/v1/admin/classes/${created.code}/schedule`, {
+    token: session.token,
+  });
+  assert.equal(schedule.status, 200);
+  assert.equal(typeof (await schedule.json()).payload, 'string');
+
+  const patched = await adminRequest(store, 'PATCH', `/api/v1/admin/classes/${created.code}`, {
+    token: session.token,
+    body: { name: '改名后的班级', teacher: '王老师' },
+  });
+  assert.equal(patched.status, 200);
+  const patchedBody = await patched.json();
+  assert.equal(patchedBody.class.name, '改名后的班级');
+  assert.equal(patchedBody.class.teacher, '王老师');
+
+  const cleared = await adminRequest(store, 'PATCH', `/api/v1/admin/classes/${created.code}`, {
+    token: session.token,
+    body: { joinPassword: '' },
+  });
+  assert.equal((await cleared.json()).class.joinPasswordRequired, false);
+
+  const removed = await adminRequest(store, 'DELETE', `/api/v1/admin/classes/${created.code}`, {
+    token: session.token,
+  });
+  assert.equal(removed.status, 200);
+  assert.equal(await store.getClass(created.code), null);
+});
+
+test('管理台在未配置 ADMIN_KEY 时返回 503', async () => {
+  const store = new MemoryStore();
+  const response = await adminRequest(store, 'GET', '/api/v1/admin/classes', { env: {} });
+  assert.equal(response.status, 503);
+  assert.equal((await response.json()).error, 'admin_not_configured');
+});
+
+test('管理台读取不存在的班级返回 404', async () => {
+  const store = new MemoryStore();
+  const login = await adminRequest(store, 'POST', '/api/v1/admin/login', {
+    body: { password: 'test-admin-key' },
+  });
+  const { token } = await login.json();
+  const missing = await adminRequest(store, 'GET', '/api/v1/admin/classes/ZZZZZZZZ', { token });
+  assert.equal(missing.status, 404);
+});

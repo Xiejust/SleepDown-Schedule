@@ -64,6 +64,33 @@ export class D1Store {
     ).bind(lastSeenAt, code, memberId).run();
   }
 
+  /** 管理台列表：一次查询取回全部班级及其成员数、课表体积与最近活跃时间。 */
+  async listClasses() {
+    const result = await this.db.prepare(
+      `SELECT c.code, c.name, c.teacher, c.join_password_hash, c.schedule_version,
+              c.schedule_updated_at, c.created_at, c.updated_at,
+              length(CAST(c.schedule_payload AS BLOB)) AS payload_size,
+              (SELECT COUNT(*) FROM members m WHERE m.class_code = c.code) AS member_count,
+              (SELECT MAX(m.last_seen_at) FROM members m WHERE m.class_code = c.code) AS last_seen_at
+       FROM classes c
+       ORDER BY c.created_at DESC`
+    ).all();
+    return (result.results ?? []).map((row) => ({
+      code: row.code,
+      name: row.name,
+      teacher: row.teacher ?? '',
+      joinPasswordHash: row.join_password_hash,
+      scheduleVersion: row.schedule_version ?? 0,
+      scheduleUpdatedAt: row.schedule_updated_at ?? null,
+      createdAt: row.created_at,
+      updatedAt: row.updated_at,
+      payloadBytes: row.payload_size ?? 0,
+      hasSchedule: (row.payload_size ?? 0) > 0,
+      memberCount: row.member_count ?? 0,
+      lastSeenAt: row.last_seen_at ?? null,
+    }));
+  }
+
   async listMembers(code) {
     const result = await this.db.prepare(
       'SELECT member_id, nickname, role, joined_at, last_seen_at FROM members WHERE class_code = ? ORDER BY joined_at ASC'

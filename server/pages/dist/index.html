@@ -1,4 +1,47 @@
 <!doctype html>
+<html lang="zh-CN">
+<head>
 <meta charset="utf-8">
-<title>SleepDown Class Sync API</title>
-<p>SleepDown 班级课表同步服务。API 入口：<code>/api/v1/health</code></p>
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="robots" content="noindex, nofollow">
+<title>SleepDown 班级课表同步服务</title>
+<style>
+  :root { color-scheme: light dark; }
+  body {
+    margin: 0; min-height: 100vh; display: grid; place-items: center; padding: 24px;
+    background: #f4f5f8; color: #191b21;
+    font: 14px/1.6 -apple-system, BlinkMacSystemFont, "Segoe UI", "PingFang SC", "Microsoft YaHei", sans-serif;
+  }
+  @media (prefers-color-scheme: dark) { body { background: #14161b; color: #eef0f4; } }
+  .card {
+    width: min(460px, 100%); background: #fff; border: 1px solid #e3e5ea; border-radius: 18px;
+    padding: 30px 28px; box-shadow: 0 10px 30px rgba(21, 26, 40, .08);
+  }
+  @media (prefers-color-scheme: dark) { .card { background: #1c1f26; border-color: #2f343f; } }
+  h1 { margin: 0 0 6px; font-size: 18px; }
+  p { margin: 0 0 18px; color: #5d6270; }
+  @media (prefers-color-scheme: dark) { p { color: #a7adbb; } }
+  a.btn {
+    display: inline-flex; align-items: center; justify-content: center; width: 100%;
+    padding: 11px; border-radius: 11px; background: #3a63d8; color: #fff;
+    text-decoration: none; font-weight: 600;
+  }
+  code { background: #f4f5f8; border: 1px solid #e3e5ea; border-radius: 6px; padding: 1px 5px; font-size: 12px; }
+  @media (prefers-color-scheme: dark) { code { background: #22262f; border-color: #2f343f; } }
+  ul { padding-left: 18px; color: #5d6270; font-size: 13px; }
+  @media (prefers-color-scheme: dark) { ul { color: #a7adbb; } }
+</style>
+</head>
+<body>
+  <div class="card">
+    <h1>SleepDown 班级课表同步服务</h1>
+    <p>API 入口：<code>/api/v1/health</code></p>
+    <a class="btn" href="/admin.html">打开课表云端管理台</a>
+    <ul>
+      <li>查看全部班级、成员与课表发布状态</li>
+      <li>编辑班级信息、导出或删除已发布课表</li>
+      <li>管理台需要服务端配置 <code>ADMIN_KEY</code></li>
+    </ul>
+  </div>
+</body>
+</html>

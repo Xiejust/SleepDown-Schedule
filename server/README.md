@@ -9,6 +9,7 @@ Cloudflare Worker + D1 实现的班级同步服务，供 SleepDown 非官方修�
 - 管理员把某个课表发布为快照，版本号自增。
 - 同学按版本号增量拉取，未变更时返回 `notModified`。
 - 管理员查看成员、修改班级信息、解散班级。
+- 自带单页管理台，用一个全局密码管理服务器上的全部班级。
 - 服务端不保存用户账号和设备信息，只保存昵称、加入时间、最近同步时间。
 
 ## 部署
@@ -63,6 +64,50 @@ npm run dev        # http://127.0.0.1:8787，数据在内存中
 npm test           # 纯 Node 测试，不需要 Cloudflare 账号
 ```
 
+## 管理台
+
+服务端自带一个单页管理界面，用来查看和管理服务器上所有已上传的班级课表，不需要安装任何东西。
+
+### 启用
+
+管理台用一把全局密码（`ADMIN_KEY`）保护，需要在部署环境里设置一次：
+
+```bash
+cd server
+npx wrangler secret put ADMIN_KEY      # Worker 部署
+# Pages 部署则：
+cd pages && npx wrangler pages secret put ADMIN_KEY --project-name sleepdown-class-sync-pages
+```
+
+未设置 `ADMIN_KEY` 时，管理台登录接口返回 `503 admin_not_configured`，其他业务接口不受影响。
+
+本地开发时默认密码是 `dev-admin`，也可以用环境变量覆盖：
+
+```bash
+ADMIN_KEY=my-password npm run dev
+```
+
+### 入口
+
+| 部署方式 | 管理台地址 |
+| --- | --- |
+| Worker | `https://<你的域名>/admin` |
+| Pages Functions | `https://sleepdown-class-sync-pages.pages.dev/admin.html` |
+| 本地 | `http://127.0.0.1:8787/admin` |
+
+登录后得到一枚短期会话令牌（默认 12 小时，可用 `ADMIN_SESSION_HOURS` 调整），保存在浏览器 `sessionStorage`，关掉标签页即失效。
+
+### 能做什么
+
+- 浏览全部班级：班级号、班级名、老师、是否设了加入口令、成员数、课表版本与体积、最后更新时间。
+- 搜索班级号／班级名／老师，按「全部 / 已发布 / 未发布 / 有加入口令」筛选，按创建时间、更新时间、成员数排序。
+- 查看单个班级详情：成员列表、已发布课表摘要（课程数、时间段数、总周数、学期开始日）。
+- 修改班级名、老师、加入口令（留空即清除口令）。
+- 导出该班级的课表 JSON。
+- 删除班级（需手动输入班级号确认）。
+
+管理界面只展示统计信息，不会返回 `adminToken` 哈希或加入口令哈希。
+
 ## 接口
 
 所有接口返回 JSON，时间戳单位为毫秒。
@@ -78,8 +123,14 @@ npm test           # 纯 Node 测试，不需要 Cloudflare 账号
 | GET | `/api/v1/classes/{code}/schedule` | 拉取课表，可带 `?version=` |
 | PUT | `/api/v1/classes/{code}/schedule` | 管理员发布课表 |
 | GET | `/api/v1/classes/{code}/admin` | 管理员查看成员 |
+| POST | `/api/v1/admin/login` | 管理台登录，返回短期会话令牌 |
+| GET | `/api/v1/admin/classes` | 管理台列出全部班级 |
+| GET | `/api/v1/admin/classes/{code}` | 管理台查看班级详情与成员 |
+| PATCH | `/api/v1/admin/classes/{code}` | 管理台修改班级信息 |
+| DELETE | `/api/v1/admin/classes/{code}` | 管理台解散班级 |
+| GET | `/api/v1/admin/classes/{code}/schedule` | 管理台导出课表快照 |
 
-管理员接口使用 `Authorization: Bearer <adminToken>`。
+管理员接口使用 `Authorization: Bearer <adminToken>`；`/api/v1/admin/*` 使用登录得到的会话令牌（同样放在 `Authorization: Bearer` 里）。
 
 ### 创建班级
 
@@ -157,5 +208,6 @@ GET /api/v1/classes/ABCD2345/schedule?version=3
 
 - 班级号是访问课表的凭证；带加入口令时口令使用 PBKDF2-SHA256 存储。
 - 管理员令牌只保存 SHA-256 哈希，服务端无法还原明文。
+- 管理台的 `ADMIN_KEY` 以 Cloudflare Secret 形式保存，不进代码库；登录后发放 HMAC-SHA256 签名的短期会话令牌，密码比较使用定时安全等长比较。
 - 这是一个轻量同步服务，没有账号体系，也没有内置频控；公开部署时建议在 Cloudflare 控制台为 `/api/v1/classes` 配置 Rate limiting 规则。
 - 课表内容会以明文保存在 D1 中。如果课表包含敏感信息，请使用私有部署或自行增加字段级加密。

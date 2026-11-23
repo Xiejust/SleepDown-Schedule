@@ -142,6 +142,117 @@ async function requireAdmin(request, store, code) {
   return { record };
 }
 
+/* ---------------------------------------------------------------- 管理台 */
+
+const ADMIN_SESSION_HOURS_DEFAULT = 12;
+
+function adminKey(env) {
+  const key = typeof env?.ADMIN_KEY === 'string' ? env.ADMIN_KEY.trim() : '';
+  return key || null;
+}
+
+function timingSafeEqual(a, b) {
+  if (a.length !== b.length) return false;
+  let diff = 0;
+  for (let i = 0; i < a.length; i += 1) diff |= a.charCodeAt(i) ^ b.charCodeAt(i);
+  return diff === 0;
+}
+
+async function hmacBase64Url(secret, message) {
+  const key = await cryptoApi().subtle.importKey(
+    'raw', textEncoder.encode(secret), { name: 'HMAC', hash: 'SHA-256' }, false, ['sign']
+  );
+  const signature = await cryptoApi().subtle.sign('HMAC', key, textEncoder.encode(message));
+  return base64Url(new Uint8Array(signature));
+}
+
+function adminSessionSeconds(env) {
+  const hours = Number(env?.ADMIN_SESSION_HOURS ?? ADMIN_SESSION_HOURS_DEFAULT);
+  const safe = Number.isFinite(hours) && hours > 0 && hours <= 24 * 30 ? hours : ADMIN_SESSION_HOURS_DEFAULT;
+  return Math.round(safe * 3600);
+}
+
+async function issueAdminToken(env) {
+  const expiresAt = Date.now() + adminSessionSeconds(env) * 1000;
+  const signature = await hmacBase64Url(adminKey(env), `sleepdown-admin:${expiresAt}`);
+  return { token: `${expiresAt}.${signature}`, expiresAt };
+}
+
+/** 管理台使用服务端统一密钥换取的短期会话令牌，与单个班级的管理员令牌互不相干。 */
+async function requireGlobalAdmin(request, env) {
+  const key = adminKey(env);
+  if (!key) {
+    return {
+      error: json(503, {
+        error: 'admin_not_configured',
+        message: '服务端未配置 ADMIN_KEY，管理台暂不可用',
+      }, corsHeaders()),
+    };
+  }
+  const token = bearerToken(request);
+  if (!token) {
+    return { error: json(401, { error: 'admin_token_required', message: '请先登录管理台' }, corsHeaders()) };
+  }
+  const separator = token.indexOf('.');
+  if (separator <= 0) {
+    return { error: json(401, { error: 'admin_token_invalid', message: '登录状态无效，请重新登录' }, corsHeaders()) };
+  }
+  const expiresAt = Number(token.slice(0, separator));
+  const signature = token.slice(separator + 1);
+  if (!Number.isFinite(expiresAt) || !signature) {
+    return { error: json(401, { error: 'admin_token_invalid', message: '登录状态无效，请重新登录' }, corsHeaders()) };
+  }
+  if (expiresAt <= Date.now()) {
+    return { error: json(401, { error: 'admin_session_expired', message: '登录已过期，请重新登录' }, corsHeaders()) };
+  }
+  const expected = await hmacBase64Url(key, `sleepdown-admin:${expiresAt}`);
+  if (!timingSafeEqual(expected, signature)) {
+    return { error: json(401, { error: 'admin_token_invalid', message: '登录状态无效，请重新登录' }, corsHeaders()) };
+  }
+  return { ok: true };
+}
+
+function byteLength(value) {
+  return new TextEncoder().encode(value).length;
+}
+
+function summarizePayload(payload) {
+  const summary = { bytes: byteLength(payload), courses: 0, timeSlots: 0, totalWeeks: null, termStartDate: null };
+  try {
+    const parsed = JSON.parse(payload);
+    summary.courses = Array.isArray(parsed?.courses) ? parsed.courses.length : 0;
+    const slots = parsed?.timeSlots ?? parsed?.periods;
+    summary.timeSlots = Array.isArray(slots) ? slots.length : 0;
+    const config = parsed?.config ?? parsed?.schedule ?? null;
+    const weeks = Number(parsed?.totalWeeks ?? config?.totalWeeks);
+    if (Number.isFinite(weeks) && weeks > 0) summary.totalWeeks = weeks;
+    const start = parsed?.termStartDate ?? config?.termStartDate;
+    if (typeof start === 'string' && start) summary.termStartDate = start;
+  } catch {
+    summary.parseError = true;
+  }
+  return summary;
+}
+
+function adminClassSummary(record) {
+  const payloadBytes = record.payloadBytes ?? 0;
+  return {
+    code: record.code,
+    displayCode: displayCode(record.code),
+    name: record.name,
+    teacher: record.teacher ?? '',
+    joinPasswordRequired: Boolean(record.joinPasswordHash),
+    memberCount: record.memberCount ?? 0,
+    scheduleVersion: record.scheduleVersion ?? 0,
+    scheduleUpdatedAt: record.scheduleUpdatedAt ?? null,
+    hasSchedule: record.hasSchedule ?? payloadBytes > 0,
+    payloadBytes,
+    lastSeenAt: record.lastSeenAt ?? null,
+    createdAt: record.createdAt ?? null,
+    updatedAt: record.updatedAt ?? null,
+  };
+}
+
 function publicClass(record, includeScheduleVersion = true) {
   return {
     code: record.code,
@@ -192,7 +303,7 @@ function validatePayload(payload) {
  *   upsertMember(code, member) -> void
  *   listMembers(code) -> member[]
  */
-export async function handleRequest(request, store) {
+export async function handleRequest(request, store, env = {}) {
   const url = new URL(request.url);
   const path = url.pathname.replace(/\/+$/, '') || '/';
 
@@ -202,6 +313,9 @@ export async function handleRequest(request, store) {
   }
 
   const parts = path.split('/').filter(Boolean);
+  if (parts[0] === 'api' && parts[1] === 'v1' && parts[2] === 'admin') {
+    return handleAdminRequest(request, store, env, parts.slice(3));
+  }
   // /api/v1/classes[/:code[/schedule|admin|join]]
   if (parts[0] !== 'api' || parts[1] !== 'v1' || parts[2] !== 'classes') {
     return json(404, { error: 'not_found', message: '接口不存在' }, corsHeaders());
@@ -446,4 +560,164 @@ async function deleteClass(request, store, code) {
   if (auth.error) return auth.error;
   await store.deleteClass(code);
   return json(200, { deleted: true }, corsHeaders());
+}
+/* ------------------------------------------------------- 管理台接口实现 */
+
+async function handleAdminRequest(request, store, env, rest) {
+  if (rest.length === 1 && rest[0] === 'login') {
+    if (request.method !== 'POST') {
+      return json(405, { error: 'method_not_allowed', message: '请使用 POST 登录' }, corsHeaders());
+    }
+    return adminLogin(request, env);
+  }
+
+  const auth = await requireGlobalAdmin(request, env);
+  if (auth.error) return auth.error;
+
+  if (rest.length === 1 && rest[0] === 'classes') {
+    if (request.method !== 'GET') {
+      return json(405, { error: 'method_not_allowed', message: '请使用 GET' }, corsHeaders());
+    }
+    const classes = await store.listClasses();
+    return json(200, {
+      classes: classes.map(adminClassSummary),
+      total: classes.length,
+      serverTime: Date.now(),
+    }, corsHeaders());
+  }
+
+  if (rest[0] === 'classes' && rest.length >= 2) {
+    const code = normalizeCode(rest[1]);
+    if (!code) return json(404, { error: 'class_not_found', message: '班级不存在' }, corsHeaders());
+    const action = rest[2] ?? '';
+    if (rest.length > 3) {
+      return json(404, { error: 'not_found', message: '接口不存在' }, corsHeaders());
+    }
+    if (action === '') {
+      if (request.method === 'GET') return adminClassDetail(store, code);
+      if (request.method === 'PATCH') return adminUpdateClass(request, store, code);
+      if (request.method === 'DELETE') return adminDeleteClass(store, code);
+      return json(405, { error: 'method_not_allowed', message: '不支持的方法' }, corsHeaders());
+    }
+    if (action === 'schedule' && request.method === 'GET') return adminClassSchedule(store, code);
+  }
+
+  return json(404, { error: 'not_found', message: '接口不存在' }, corsHeaders());
+}
+
+async function adminLogin(request, env) {
+  const key = adminKey(env);
+  if (!key) {
+    return json(503, {
+      error: 'admin_not_configured',
+      message: '服务端未配置 ADMIN_KEY，请先执行 wrangler secret put ADMIN_KEY',
+    }, corsHeaders());
+  }
+  const parsed = await readJson(request);
+  if (parsed.error) return parsed.error;
+  const password = typeof parsed.value?.password === 'string' ? parsed.value.password : '';
+  // 先各自哈希再比较，避免长度差异导致的时序侧信道。
+  const [provided, expected] = await Promise.all([
+    sha256Hex(`sleepdown-admin-login:${password}`),
+    sha256Hex(`sleepdown-admin-login:${key}`),
+  ]);
+  if (!timingSafeEqual(provided, expected)) {
+    return json(401, { error: 'admin_password_invalid', message: '管理员密码不正确' }, corsHeaders());
+  }
+  const session = await issueAdminToken(env);
+  return json(200, {
+    token: session.token,
+    expiresAt: session.expiresAt,
+    ttlSeconds: adminSessionSeconds(env),
+  }, corsHeaders());
+}
+
+async function adminClassDetail(store, code) {
+  const record = await store.getClass(code);
+  if (!record) return json(404, { error: 'class_not_found', message: '班级不存在' }, corsHeaders());
+  const members = await store.listMembers(code);
+  const payload = record.schedulePayload ?? null;
+  return json(200, {
+    class: adminClassSummary({
+      ...record,
+      memberCount: members.length,
+      payloadBytes: payload ? byteLength(payload) : 0,
+      hasSchedule: Boolean(payload),
+      lastSeenAt: members.reduce((latest, member) => Math.max(latest, member.lastSeenAt ?? 0), 0) || null,
+    }),
+    members: members.map((member) => ({
+      memberId: member.memberId,
+      nickname: member.nickname,
+      role: member.role,
+      joinedAt: member.joinedAt,
+      lastSeenAt: member.lastSeenAt,
+    })),
+    schedule: payload ? summarizePayload(payload) : null,
+  }, corsHeaders());
+}
+
+async function adminClassSchedule(store, code) {
+  const record = await store.getClass(code);
+  if (!record) return json(404, { error: 'class_not_found', message: '班级不存在' }, corsHeaders());
+  if (!record.schedulePayload) {
+    return json(404, { error: 'schedule_missing', message: '该班级还没有发布过课表' }, corsHeaders());
+  }
+  return json(200, {
+    code: record.code,
+    name: record.name,
+    version: record.scheduleVersion,
+    updatedAt: record.scheduleUpdatedAt,
+    payload: record.schedulePayload,
+  }, corsHeaders());
+}
+
+async function adminUpdateClass(request, store, code) {
+  const record = await store.getClass(code);
+  if (!record) return json(404, { error: 'class_not_found', message: '班级不存在' }, corsHeaders());
+  const parsed = await readJson(request);
+  if (parsed.error) return parsed.error;
+  const body = parsed.value ?? {};
+  const patch = { updatedAt: Date.now() };
+  if (body.name != null) {
+    const name = cleanString(body.name, MAX_NAME);
+    if (!name) return json(400, { error: 'invalid_name', message: '班级名称需为 1-40 个字符' }, corsHeaders());
+    patch.name = name;
+  }
+  if (body.teacher != null) {
+    const teacher = cleanString(body.teacher, MAX_NAME);
+    if (teacher === null) return json(400, { error: 'invalid_teacher', message: '教师名称过长' }, corsHeaders());
+    patch.teacher = teacher;
+  }
+  if (body.joinPassword != null) {
+    if (body.joinPassword === '') {
+      patch.joinPasswordHash = null;
+      patch.joinPasswordSalt = null;
+    } else {
+      const password = cleanString(body.joinPassword, 64);
+      if (!password || password.length < 4) {
+        return json(400, { error: 'invalid_join_password', message: '加入口令至少 4 个字符' }, corsHeaders());
+      }
+      patch.joinPasswordSalt = base64Url(randomBytes(12));
+      patch.joinPasswordHash = await passwordHash(password, patch.joinPasswordSalt);
+    }
+  }
+  await store.updateClass(code, patch);
+  const updated = await store.getClass(code);
+  const members = await store.listMembers(code);
+  const payload = updated.schedulePayload ?? null;
+  return json(200, {
+    class: adminClassSummary({
+      ...updated,
+      memberCount: members.length,
+      payloadBytes: payload ? byteLength(payload) : 0,
+      hasSchedule: Boolean(payload),
+    }),
+  }, corsHeaders());
+}
+
+async function adminDeleteClass(store, code) {
+  const record = await store.getClass(code);
+  if (!record) return json(404, { error: 'class_not_found', message: '班级不存在' }, corsHeaders());
+  await store.deleteClass(code);
+  return json(200, { deleted: true, code }, corsHeaders());
 }

@@ -9,5 +9,10 @@ binding = "DB"
 database_name = "sleepdown-class-sync"
 database_id = "619a82b6-30bf-4546-bdfc-1d05b4498366"
 
+[[rules]]
+type = "Text"
+globs = ["**/*.html"]
+fallthrough = true
+
 [observability]
 enabled = true

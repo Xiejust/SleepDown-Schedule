@@ -39,6 +39,25 @@ export class MemoryStore {
     if (member) member.lastSeenAt = lastSeenAt;
   }
 
+  async listClasses() {
+    const encoder = new TextEncoder();
+    return [...this.classes.values()]
+      .map((record) => {
+        const members = [...(this.members.get(record.code)?.values() ?? [])];
+        const payloadBytes = record.schedulePayload
+          ? encoder.encode(record.schedulePayload).length
+          : 0;
+        return {
+          ...record,
+          payloadBytes,
+          hasSchedule: payloadBytes > 0,
+          memberCount: members.length,
+          lastSeenAt: members.reduce((latest, member) => Math.max(latest, member.lastSeenAt ?? 0), 0) || null,
+        };
+      })
+      .sort((a, b) => (b.createdAt ?? 0) - (a.createdAt ?? 0));
+  }
+
   async listMembers(code) {
     return [...(this.members.get(code)?.values() ?? [])].sort((a, b) => a.joinedAt - b.joinedAt);
   }
