@@ -73,13 +73,7 @@ SleepDown 是面向日常学习的 Android 课程表：从导入整学期课程�
 
 ### 导入
 
-支持手动录入、教务导入、WakeUp/星链等课表口令和 ICS 文件导入，也可使用 AI 从文本、表格、图片或 PDF 整理课程。教务入口复用 [拾光仓库](https://github.com/xingheyuzhuan/shiguang_warehouse) 的适配资源；实际可用学校以应用中的列表和登录结果为准。导入时先检查预览中的课程、周次、节次与开学日期，再确认写入。
-
-AI 导入可选择 OpenAI、DeepSeek、小米 MiMo 或自定义兼容接口，文件类型与图片识别能力取决于所选模型。服务商与模型配置由用户选择。
-
-### 教务自动刷新
-
-支持为课表绑定教务学校与已登录会话，手动刷新或开启周期刷新。可自动刷新的入口通过应用中的连接流程确认；需要网页操作的入口可打开教务页面手动刷新。会话失效后需要重新登录，刷新结果绑定到已选择的课表。
+支持手动录入、学生课表文件（`.xls`）导入、WakeUp/星链等课表口令和 ICS 文件导入。导入时先检查预览中的课程、周次、节次与开学日期，再确认写入。
 
 ### 班级课表同步（本修改版新增）
 
@@ -112,7 +106,7 @@ AI 导入可选择 OpenAI、DeepSeek、小米 MiMo 或自定义兼容接口，�
 2. **核对学期与作息**：在课表设置中确认开学日期、总周数和节次时间；当前教学周始终按日期推算。缺少开学日期时保留原周次并提示补充。
 3. **查看与调整**：切换日视图查看当天安排，或在周视图切周查看课程；长按课程进入快速编辑，可调整对应周的课程安排。
 4. **启用提醒**：在通知设置中开启所需提醒，按系统提示授予通知、精确闹钟及相关后台权限。
-5. **按需使用扩展功能**：添加桌面组件，配置个性化外观，或为支持的教务入口连接自动刷新。
+5. **按需使用扩展功能**：添加桌面组件，或配置个性化外观。
 6. **共享课表（可选）**：部署 `server/` 后端后，在「设置 → 班级课表」创建或加入班级；管理员发布课表，同学同步接收，后续修改会按版本更新。
 
 AI 功能为可选能力，基础课表可独立使用。启用时选择服务商与模型，并按服务商要求配置 API Key。
@@ -177,8 +171,6 @@ CourseSchedule/
 │   │   ├── glass/                           # 液态玻璃框架及 UI 适配
 │   │   ├── transition/{legacy,...}/         # 统一转场与既有 Legacy renderer
 │   │   └── *.kt                             # 稳定 Android 入口与兼容门面
-│   ├── src/main/assets/shiguang_warehouse-main/
-│   │                                        # 教务系统适配资源
 │   └── src/test/ / src/androidTest/          # 单元测试、迁移和仪器测试
 ├── benchmark/                                # Macrobenchmark 与 Baseline Profile
 ├── server/                                   # 班级同步后端（Cloudflare Worker + D1）
@@ -198,7 +190,7 @@ CourseSchedule/
 | UI | Jetpack Compose、Material 3、Miuix |
 | 数据 | Room、KSP、Kotlin Serialization |
 | 图形 | `kyant/backdrop`、自定义玻璃与动态模糊管线 |
-| 导入 | Android WebView / Custom Tabs、PDF Renderer、ICS 解析 |
+| 导入 | HTML 表格（`.xls`）解析、ICS 解析 |
 | 通知 | Alarm、Foreground Service、实时活动兼容逻辑 |
 | 桌面组件 | RemoteViews |
 | 性能 | Macrobenchmark、Baseline Profile |
@@ -206,8 +198,7 @@ CourseSchedule/
 ## 第三方项目与许可证
 
 - [Kyant0/AndroidLiquidGlass](https://github.com/Kyant0/AndroidLiquidGlass)：液态玻璃目录组件基础，Apache-2.0。
-- [compose-miuix-ui/miuix](https://github.com/compose-miuix-ui/miuix)：设置和教务导入页面组件，Apache-2.0。
-- [xingheyuzhuan/shiguang_warehouse](https://github.com/xingheyuzhuan/shiguang_warehouse)：教务系统适配资源，MIT。
+- [compose-miuix-ui/miuix](https://github.com/compose-miuix-ui/miuix)：设置页面组件，Apache-2.0。
 - AndroidX、Jetpack Compose、Kotlin Serialization 等依赖遵循各自许可证。
 
 本项目对第三方代码的引用和修改范围见 [THIRD_PARTY_NOTICES.md](THIRD_PARTY_NOTICES.md)。
