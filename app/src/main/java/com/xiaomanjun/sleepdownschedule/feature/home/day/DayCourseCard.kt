@@ -56,7 +56,6 @@ import com.xiaomanjun.sleepdownschedule.domain.schedule.captureOriginalPeriodTim
 import com.xiaomanjun.sleepdownschedule.domain.schedule.isHiddenByPeriodAlignment
 import com.xiaomanjun.sleepdownschedule.domain.schedule.projectCourseArrangement
 import com.xiaomanjun.sleepdownschedule.domain.schedule.effectiveArrangementOrNull
-import com.xiaomanjun.sleepdownschedule.feature.agent.homeCountdownShockwave
 import com.xiaomanjun.sleepdownschedule.feature.course.editor.CourseEditorDayAppearance
 import com.xiaomanjun.sleepdownschedule.feature.course.editor.LocalCourseEditorFlightRegistry
 import com.xiaomanjun.sleepdownschedule.feature.home.CourseAdjustmentBadge
@@ -116,7 +115,7 @@ internal fun DayTimelineCourse(
     val pageForeground = homeForegroundColor(config)
     val foreground = homeCourseTextColor(config, course, pageForeground, subdued)
     Column(
-        modifier = Modifier.homeSwitchGroup().homeCountdownShockwave(),
+        modifier = Modifier.homeSwitchGroup(),
         verticalArrangement = Arrangement.spacedBy(6.dp),
     ) {
         CourseGlassCard(

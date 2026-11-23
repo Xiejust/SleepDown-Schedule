@@ -5,9 +5,6 @@ import android.content.Context
 import androidx.room.Room
 import com.xiaomanjun.sleepdownschedule.data.repository.ScheduleRepository
 import com.xiaomanjun.sleepdownschedule.domain.schedule.*
-import com.xiaomanjun.sleepdownschedule.model.agent.AgentActionScope
-import com.xiaomanjun.sleepdownschedule.model.agent.AgentValidatedAction
-import com.xiaomanjun.sleepdownschedule.model.agent.AgentValidatedActionType
 import com.xiaomanjun.sleepdownschedule.model.*
 import com.xiaomanjun.sleepdownschedule.model.ScheduleAdjustment
 import com.xiaomanjun.sleepdownschedule.feature.importing.shiguang.ShiguangImportSession
@@ -372,70 +369,6 @@ class SharedPeriodSchemeRepositoryTest {
     }
 
     @Test
-    fun combinedAgentSettingsAndCoursePlanApplyTheExplicitRemapExactlyOnce() = runBlocking {
-        database.courseDao().insertCourse(course(1, listOf(3)))
-        database.courseDao().insertCourse(course(2, listOf(3)))
-        val before = repository.snapshot()
-        val original = before.courses.single()
-        val session = PeriodTimelineSession(before.config, repository.loadPeriodSchemes(1))
-        val inserted = requireNotNull(appendTimelinePeriod(session, PeriodDayPart.MORNING))
-        val (result, after) = repository.commitAgentSettingPlan(before, inserted.config,
-            inserted.active.times.map { PeriodEntity(it.periodIndex, it.startTime, it.endTime, 1) },
-            inserted.draft, null, listOf(updateAllWeeks(original, original.copy(periods = listOf(4)))))
-
-        assertTrue(result.success && result.verified)
-        assertEquals(listOf(4), after.courses.single().periods)
-        assertEquals(original.id, after.courses.single().id)
-        assertNotEquals(11L, after.config.activePeriodSchemeId)
-        assertEquals(listOf(3), database.courseDao().getCourses(2).single().periods)
-        assertEquals(11L, database.configDao().getConfig(2)?.activePeriodSchemeId)
-        assertEquals(3, database.periodSchemeDao().getTimes(11).size)
-        assertEquals(2, database.periodSchemeDao().getAllSchemes().size)
-    }
-
-    @Test
-    fun impossibleCombinedAgentPlanRollsBackCopyConfigCoursesAndName() = runBlocking {
-        database.courseDao().insertCourse(course(1, listOf(3)))
-        val before = repository.snapshot()
-        val original = before.courses.single()
-        val session = PeriodTimelineSession(before.config, repository.loadPeriodSchemes(1))
-        val inserted = requireNotNull(appendTimelinePeriod(session, PeriodDayPart.MORNING))
-        val initial = state()
-        rejected { repository.commitAgentSettingPlan(before, inserted.config,
-            inserted.active.times.map { PeriodEntity(it.periodIndex, it.startTime, it.endTime, 1) },
-            inserted.draft, "不应保存的名称",
-            listOf(updateAllWeeks(original, original.copy(periods = listOf(99))))) }
-        assertEquals(initial, state())
-    }
-
-    @Test
-    fun undoAgentSettingsRebindsOriginalSharedIdentityWithoutMutatingIt() = runBlocking {
-        database.courseDao().insertCourse(course(1, listOf(3)))
-        val before = repository.snapshot()
-        val original = before.courses.single()
-        val oldSchemes = repository.loadPeriodSchemes(1)
-        val oldPublic = requireNotNull(database.periodSchemeDao().getScheme(11))
-        val oldTimes = database.periodSchemeDao().getTimes(11)
-        val session = PeriodTimelineSession(before.config, oldSchemes)
-        val inserted = requireNotNull(appendTimelinePeriod(session, PeriodDayPart.MORNING))
-        val (_, after) = repository.commitAgentSettingPlan(before, inserted.config,
-            inserted.active.times.map { PeriodEntity(it.periodIndex, it.startTime, it.endTime, 1) },
-            inserted.draft, "更新后的课表",
-            listOf(updateAllWeeks(original, original.copy(periods = listOf(4)))))
-        val copiedId = requireNotNull(after.config.activePeriodSchemeId)
-
-        repository.restoreAgentSettingPlan(after, before, oldSchemes, "课表1")
-        assertEquals(11L, database.configDao().getConfig(1)?.activePeriodSchemeId)
-        assertEquals(before.config, database.configDao().getConfig(1))
-        assertEquals(before.periods, database.configDao().getPeriods(1))
-        assertEquals(before.courses.map { it.originalArrangement() }, database.courseDao().getCourses(1))
-        assertEquals(oldPublic, database.periodSchemeDao().getScheme(11))
-        assertEquals(oldTimes, database.periodSchemeDao().getTimes(11))
-        assertNotNull(database.periodSchemeDao().getScheme(copiedId))
-        assertEquals(11L, database.configDao().getConfig(2)?.activePeriodSchemeId)
-    }
-
-    @Test
     fun deliberateDuplicateIsNotContinuouslyDeduplicated() = runBlocking {
         val duplicate = repository.duplicatePublicPeriodScheme("shared")
         assertNotEquals("shared", duplicate.id)
@@ -712,9 +645,6 @@ class SharedPeriodSchemeRepositoryTest {
         teacher = null, location = null, weekday = 1, periods = periods, weeks = listOf(1, 2),
         weekParity = WeekParity.ALL, note = null, scheduleId = scheduleId)
 
-    private fun updateAllWeeks(original: CourseEntity, edited: CourseEntity) = AgentValidatedAction(
-        type = AgentValidatedActionType.UPDATE, original = original, edited = edited,
-        scope = AgentActionScope.ALL_WEEKS, sourceScheduleId = original.scheduleId, summary = "调整课程节次")
 
     private suspend fun state(): List<Any> = listOf(database.scheduleProfileDao().getProfiles(),
         database.configDao().getAllConfigs(), database.configDao().getAllPeriods(),

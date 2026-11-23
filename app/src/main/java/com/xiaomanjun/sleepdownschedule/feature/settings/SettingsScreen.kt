@@ -53,12 +53,9 @@ import com.xiaomanjun.sleepdownschedule.feature.backup.BackupRestoreSettingsScre
 import com.xiaomanjun.sleepdownschedule.core.ui.interaction.blockPaneInputWhile
 import com.xiaomanjun.sleepdownschedule.core.ui.interaction.landscapePageBlur
 import com.xiaomanjun.sleepdownschedule.feature.home.rememberHomeAdaptiveMetrics
-import com.xiaomanjun.sleepdownschedule.feature.importing.DonateSettingsScreen
-import com.xiaomanjun.sleepdownschedule.feature.schedule.autorefresh.AutoRefreshScheduleStore
 import com.xiaomanjun.sleepdownschedule.feature.schedule.manager.ScheduleManagerScreen
 import com.xiaomanjun.sleepdownschedule.feature.settings.about.AutoUpdateSettingsScreen
 import com.xiaomanjun.sleepdownschedule.feature.settings.about.ChangelogSettingsScreen
-import com.xiaomanjun.sleepdownschedule.feature.feedback.FeedbackScreen
 import com.xiaomanjun.sleepdownschedule.feature.settings.about.ColorOsAboutSettingsScreen
 import com.xiaomanjun.sleepdownschedule.feature.settings.about.SoftwareUpdateMenu
 import com.xiaomanjun.sleepdownschedule.feature.settings.about.WideSoftwareUpdateToolbarButton
@@ -78,7 +75,6 @@ fun SettingsScreen(
     onUpdateGeneralConfig: (ScheduleConfigEntity) -> Unit = onUpdateConfig,
     onUpdateHomeChromeBlurScale: (Float) -> Unit,
     onPreviewLiveUpdate: (ScheduleConfigEntity) -> Unit,
-    onReplayWelcome: () -> Unit,
     onCreateSchedule: (String) -> Unit = {},
     onActivateSchedule: (Int, (() -> Unit)?) -> Unit = { _, _ -> },
     onRenameSchedule: (Int, String) -> Unit = { _, _ -> },
@@ -93,8 +89,6 @@ fun SettingsScreen(
     val adaptiveMetrics = rememberHomeAdaptiveMetrics()
     var backupPreviewUriString by rememberSaveable { mutableStateOf<String?>(null) }
     var showingUpdateNotes by rememberSaveable { mutableStateOf(false) }
-    var autoRefreshWarehouseRequest by remember { mutableIntStateOf(0) }
-    val autoRefreshProfile = AutoRefreshScheduleStore.observe(context).collectAsStateWithLifecycle().value
     GlassMiuixSettingsTheme(pageConfig) {
         if (page == SettingsPage.Root && adaptiveMetrics.isLargeScreen) {
             var tabletNavigation by rememberSaveable(
@@ -165,14 +159,9 @@ fun SettingsScreen(
             }
             fun requestTabletRootPage(nextPage: SettingsPage) {
                 val navigation = tabletNavigation
-                if (navigation.rootPage == nextPage && navigation.detailPages.isEmpty() &&
-                    nextPage != SettingsPage.Feedback
-                ) return
+                if (navigation.rootPage == nextPage && navigation.detailPages.isEmpty()) return
                 requestPaneExit(checkScheduleDraft = nextPage != navigation.rootPage) { completed ->
-                    if (completed) {
-                        if (nextPage == SettingsPage.Feedback) onPageChange(nextPage)
-                        else applyTabletRootPage(nextPage)
-                    }
+                    if (completed) applyTabletRootPage(nextPage)
                 }
             }
             fun pushTabletDetailPage(nextPage: SettingsPage) {
@@ -258,8 +247,7 @@ fun SettingsScreen(
                         CouiSettingsTabletDetailPaneScaffold(
                             title = if (targetPage == SettingsPage.SoftwareUpdate && showingUpdateNotes) "更新说明" else targetPage.title(),
                             config = pageConfig,
-                            topBarVisible = targetPage != SettingsPage.Feedback &&
-                                !(targetPage == SettingsPage.Widgets && tabletWidgetEditorVisible),
+                            topBarVisible = !(targetPage == SettingsPage.Widgets && tabletWidgetEditorVisible),
                             showBackButton = navigation.detailPages.isNotEmpty() ||
                                 (targetPage == SettingsPage.SoftwareUpdate && showingUpdateNotes),
                             onBack = ::popTabletDetailPage,
@@ -268,18 +256,8 @@ fun SettingsScreen(
                                 { WideSoftwareUpdateToolbarButton(CouiIcons.Back, "返回", onClick = ::popTabletDetailPage) }
                             } else null,
                             topBarActions = { topBackdrop ->
-                                if (targetPage == SettingsPage.AutoRefreshSchedule && autoRefreshProfile == null) {
-                                    TopGlassIconButton(
-                                        backdrop = topBackdrop,
-                                        config = pageConfig,
-                                        iconRes = R.drawable.ic_refresh,
-                                        contentDescription = "更新自动刷新适配列表",
-                                        onClick = { autoRefreshWarehouseRequest++ },
-                                        modifier = Modifier.size(SleepDownDesignTokens.SecondaryPage.BackButtonSize),
-                                        buttonHeight = 42.dp
-                                    )
-                                } else if (targetPage == SettingsPage.SoftwareUpdate) {
-                                    SoftwareUpdateMenu(topBackdrop, onReplayWelcome, onOpenPage = ::pushTabletDetailPage)
+                                if (targetPage == SettingsPage.SoftwareUpdate) {
+                                    SoftwareUpdateMenu(topBackdrop, onOpenPage = ::pushTabletDetailPage)
                                 }
                             },
                             modifier = Modifier.fillMaxSize().then(landscapePageBlur(switchingCategory))
@@ -290,7 +268,6 @@ fun SettingsScreen(
                                 pageState = pageState,
                                 backdrop = paneBackdrop,
                                 onPageChange = ::pushTabletDetailPage,
-                                onFeedbackBack = if (navigation.detailPages.isNotEmpty()) ::popTabletDetailPage else null,
                                 showUpdateNotes = showingUpdateNotes,
                                 onOpenUpdateNotes = { showingUpdateNotes = true },
                                 onSave = onSave,
@@ -327,7 +304,6 @@ fun SettingsScreen(
                                         if (needsInterception) put(targetPage, true) else remove(targetPage)
                                     }
                                 },
-                                autoRefreshWarehouseRequest = autoRefreshWarehouseRequest,
                                 periodSchemeReturnRequest = periodSchemeReturnRequest
                             )
                         }
@@ -392,9 +368,7 @@ private fun SettingsPageContent(
     exitCommitRequest: Int = 0,
     onExitCommitFinished: (Boolean) -> Unit = {},
     onExitInterceptionChange: (Boolean) -> Unit = {},
-    autoRefreshWarehouseRequest: Int = 0,
     periodSchemeReturnRequest: Int = 0,
-    onFeedbackBack: (() -> Unit)? = null,
 ) {
     when (page) {
         SettingsPage.Root -> SettingsRootScreen(pageState, backdrop, onPageChange = onPageChange)
@@ -416,13 +390,6 @@ private fun SettingsPageContent(
             backdrop,
             onEditorVisibilityChange = onWidgetEditorVisibilityChange
         )
-        SettingsPage.AiImport -> AiImportSettingsScreen(
-            state = state,
-            backdrop = backdrop,
-            exitCommitRequest = exitCommitRequest,
-            onExitCommitFinished = onExitCommitFinished
-        )
-        SettingsPage.DayAgent -> DayAgentSettingsScreen(state, backdrop)
         SettingsPage.Schedule -> key(periodSchemeReturnRequest) { ScheduleConfigScreen(
             state = state,
             backdrop = backdrop,
@@ -444,11 +411,6 @@ private fun SettingsPageContent(
         )
         SettingsPage.SpecialCourses -> TimeSlotCourseManagementScreen(
             state, exitCommitRequest, onExitCommitFinished, onExitInterceptionChange
-        )
-        SettingsPage.AutoRefreshSchedule -> AutoRefreshScheduleSettingsScreen(
-            state = state,
-            backdrop = backdrop,
-            warehouseRefreshRequest = autoRefreshWarehouseRequest
         )
         SettingsPage.Notifications -> ScheduleConfigScreen(
             state = state,
@@ -489,15 +451,12 @@ private fun SettingsPageContent(
         SettingsPage.About -> ColorOsAboutSettingsScreen(
             pageState,
             backdrop,
-			onDonate = { onPageChange(SettingsPage.Donate) },
 			onPrivacyPolicy = { onPageChange(SettingsPage.PrivacyPolicy) },
             onSoftwareUpdate = { onPageChange(SettingsPage.SoftwareUpdate) },
         )
         SettingsPage.Changelog -> ChangelogSettingsScreen(pageState, backdrop)
-        SettingsPage.Feedback -> FeedbackScreen(pageState.config, onBack = onFeedbackBack)
         SettingsPage.SoftwareUpdate -> SoftwareUpdateSettingsScreen(pageState, backdrop, showUpdateNotes, onOpenUpdateNotes)
         SettingsPage.AutoUpdate -> AutoUpdateSettingsScreen(pageState.config, backdrop, onUpdateGeneralConfig)
-		SettingsPage.Donate -> DonateSettingsScreen(pageState, backdrop)
 		SettingsPage.PrivacyPolicy -> PrivacyPolicySettingsScreen(pageState, backdrop)
     }
 }

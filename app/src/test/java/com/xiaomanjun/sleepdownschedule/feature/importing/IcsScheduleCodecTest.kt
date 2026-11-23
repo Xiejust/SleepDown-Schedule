@@ -22,11 +22,6 @@ class IcsScheduleCodecTest {
         assertEquals(7, restored.courses.single().weekday)
     }
 
-    @Test fun aiCalendarFallbackKeepsCompleteTextAndRejectsOversizedInputBeforeUpload() {
-        val text = "BEGIN:VCALENDAR\nEND:VCALENDAR"
-        assertEquals(text, icsTextForAi(text.toByteArray()))
-        assertTrue(runCatching { icsTextForAi("x".repeat(60_001).toByteArray()) }.isFailure)
-    }
     @Test fun overlappingClockRangesOnDifferentDaysCreateNonOverlappingGrid() {
         val bytes = """
             BEGIN:VCALENDAR

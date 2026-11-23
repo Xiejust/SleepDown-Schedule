@@ -66,7 +66,7 @@ private val SleepDownPrivacyPolicySections = listOf(
     ),
     PrivacyPolicySection(
         "十、政策更新与联系我们",
-        "功能、数据处理方式或法律要求发生重要变化时，我们会更新本政策，并可通过应用内协议、公告或官网提示。若更新涉及需要重新取得同意的事项，我们会依法另行征得同意。运营者为 SleepDown 课程表开发者。隐私问题、权利请求与投诉可通过官网 https://sleepdownschedule.cn 或 GitHub Issues（xiaomanjun233/CourseSchedule）联系我们。"
+        "功能、数据处理方式或法律要求发生重要变化时，我们会更新本政策，并可通过应用内协议、公告或官网提示。若更新涉及需要重新取得同意的事项，我们会依法另行征得同意。运营者为 SleepDown 课程表开发者。隐私问题、权利请求与投诉可通过官网 https://sleepdownschedule.cn 或 GitHub Issues（Xiejust/SleepDown-Schedule）联系我们。"
     )
 )
 
@@ -92,48 +92,5 @@ fun PrivacyPolicySettingsScreen(state: AppState, backdrop: Backdrop?) {
                 }
             }
         }
-    }
-}
-
-internal fun RemoteDonationEntry.formattedAmount(): String {
-    val number = BigDecimal.valueOf(amountCents, 2).toPlainString()
-    return when (currency) {
-        "CNY" -> "¥$number"
-		"USD" -> "\$$number"
-        "EUR" -> "€$number"
-        else -> "$currency $number"
-    }
-}
-
-@Composable
-fun DonationThanksPanel(
-	state: AppState,
-	backdrop: Backdrop?,
-	section: RemoteDonationSection
-) {
-	val entries = section.entries.filter(RemoteDonationEntry::enabled).sortedBy { it.displayOrder }
-	SettingsGroup(backdrop = backdrop, config = state.config, modifier = Modifier.fillMaxWidth()) {
-		SettingsInfoRow(
-			section.title.ifBlank { "捐赠致谢" },
-			section.message.ifBlank { "感谢每一份支持。" }
-		)
-		if (entries.isNotEmpty()) DonationPodium(entries.take(3))
-		if (entries.size > 3) {
-		Row(modifier = Modifier.fillMaxWidth().padding(horizontal = 20.dp, vertical = 14.dp)) {
-			Text("ID", modifier = Modifier.weight(1f), style = MaterialTheme.typography.labelMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
-			Text("捐赠金额", modifier = Modifier.weight(1f), textAlign = TextAlign.End, style = MaterialTheme.typography.labelMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
-		}
-		entries.drop(3).forEach { item ->
-			SettingsDivider()
-			Row(modifier = Modifier.fillMaxWidth().padding(horizontal = 20.dp, vertical = 15.dp)) {
-				Text(item.supporterId, modifier = Modifier.weight(1f), style = MaterialTheme.typography.bodyMedium, fontWeight = FontWeight.Medium)
-				Text(item.formattedAmount(), modifier = Modifier.weight(1f), textAlign = TextAlign.End, style = MaterialTheme.typography.bodyMedium, fontWeight = FontWeight.SemiBold, color = MaterialTheme.colorScheme.primary)
-			}
-		}
-		}
-		if (entries.isEmpty()) {
-			SettingsDivider()
-			Text("名单已发布，暂时还没有公开条目。", modifier = Modifier.fillMaxWidth().padding(20.dp), style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
-		}
     }
 }

@@ -43,6 +43,9 @@ import com.xiaomanjun.sleepdownschedule.BuildConfig
 import com.xiaomanjun.sleepdownschedule.R
 import com.xiaomanjun.sleepdownschedule.core.identity.AppDistribution
 import com.xiaomanjun.sleepdownschedule.core.performance.AppMaterialPreferences
+import com.xiaomanjun.sleepdownschedule.core.ui.designsystem.LiquidAlertAction
+import com.xiaomanjun.sleepdownschedule.core.ui.designsystem.LiquidAlertActionStyle
+import com.xiaomanjun.sleepdownschedule.core.ui.designsystem.LiquidAlertDialog
 import com.xiaomanjun.sleepdownschedule.core.ui.designsystem.SleepDownSecondaryPageList
 import com.xiaomanjun.sleepdownschedule.core.ui.scaffold.detailContentBottomPadding
 import com.xiaomanjun.sleepdownschedule.core.ui.scaffold.detailContentTopPadding
@@ -61,7 +64,7 @@ import com.xiaomanjun.sleepdownschedule.model.VisualEffectMode
 /** 关于页保留版本入口，更新和历史日志交给独立的全屏页面。 */
 @Composable
 internal fun ColorOsAboutSettingsScreen(
-    state: AppState, backdrop: Backdrop?, onDonate: () -> Unit, onPrivacyPolicy: () -> Unit,
+    state: AppState, backdrop: Backdrop?, onPrivacyPolicy: () -> Unit,
     onSoftwareUpdate: () -> Unit,
 ) {
     val context = LocalContext.current
@@ -87,6 +90,7 @@ internal fun ColorOsAboutSettingsScreen(
     val browser = remember(context) { context.resolveSleepDownCustomTabsPackage() }
     fun open(url: String) = context.openSleepDownCustomTab(url, providerPackage = browser,
         initialWidthPx = with(density) { (configuration.screenWidthDp.dp * .68f).roundToPx() }, darkTheme = dark)
+    var showSponsor by remember { mutableStateOf(false) }
     LaunchedEffect(updates) {
         GiteeAppUpdater.restoreCachedStatus(context, version)
         if (AppDistribution.supportsSelfUpdate) updates.checkForUpdate(markDailyCheck = false)
@@ -100,20 +104,21 @@ internal fun ColorOsAboutSettingsScreen(
         }
         item(key = "about-github") {
             SettingsGroup(backdrop, state.config) {
-                AboutGitHubRow("关于开发者", "xiaomanjun233", githubIcon) { open(SleepDownDeveloperUrl) }
+                AboutGitHubRow("关于开发者", "Xiejust", githubIcon) { open(SleepDownDeveloperUrl) }
                 SettingsDivider()
                 AboutGitHubRow("项目仓库", "SleepDown-Schedule", githubIcon) { open(SleepDownSourceUrl) }
             }
         }
         item(key = "about-links") {
             SettingsGroup(backdrop, state.config) {
+                SettingsNavigationRow("赞助支持", "如果这个课表帮到了你，欢迎请作者喝一杯",
+                    onClick = { showSponsor = true })
+                SettingsDivider()
                 SettingsNavigationRow("官方网站", onClick = { open(SleepDownWebsiteUrl) })
                 SettingsDivider()
                 SettingsNavigationRow("隐私政策", onClick = onPrivacyPolicy)
                 SettingsDivider()
                 SettingsNavigationRow("开源许可", onClick = { open("$SleepDownSourceUrl/blob/main/LICENSE.md") })
-                SettingsDivider()
-                SettingsNavigationRow("支持开发者", onClick = onDonate)
             }
         }
         item(key = "about-open-source") {
@@ -147,10 +152,41 @@ internal fun ColorOsAboutSettingsScreen(
                 textAlign = TextAlign.Center)
         }
     }
+
+    if (showSponsor) {
+        LiquidAlertDialog(
+            title = "赞助支持",
+            message = "",
+            actions = listOf(
+                LiquidAlertAction("关闭", LiquidAlertActionStyle.Primary) { showSponsor = false }
+            ),
+            config = state.config,
+            onDismissRequest = { showSponsor = false },
+            messageContent = {
+                Column(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalAlignment = Alignment.CenterHorizontally,
+                    verticalArrangement = Arrangement.spacedBy(12.dp)
+                ) {
+                    Image(
+                        painter = painterResource(R.drawable.sponsor_qr),
+                        contentDescription = "赞助二维码",
+                        modifier = Modifier.size(220.dp)
+                    )
+                    Text(
+                        "微信扫码即可赞助，感谢你的支持。",
+                        style = rememberCouiTextStyle(CouiTextKind.PreferenceSummary),
+                        color = CouiTheme.colorScheme.onSurfaceVariant,
+                        textAlign = TextAlign.Center
+                    )
+                }
+            }
+        )
+    }
 }
 
-internal const val SleepDownFullName = "SleepDown课程表"
-internal const val SleepDownDeveloperUrl = "https://github.com/xiaomanjun233"
+internal const val SleepDownFullName = "AHMU课程表"
+internal const val SleepDownDeveloperUrl = "https://github.com/Xiejust"
 
 @Composable
 internal fun VersionCardArtwork(modifier: Modifier) {

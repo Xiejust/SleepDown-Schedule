@@ -221,7 +221,6 @@ dependencies {
     implementation("androidx.core:core:1.15.0")
     implementation("androidx.browser:browser:1.8.0")
     implementation("androidx.webkit:webkit:1.14.0")
-    implementation("androidx.javascriptengine:javascriptengine:1.1.1")
     implementation("androidx.lifecycle:lifecycle-runtime-ktx:2.8.7")
     implementation("androidx.lifecycle:lifecycle-process:2.8.7")
     implementation("androidx.work:work-runtime-ktx:2.10.1")

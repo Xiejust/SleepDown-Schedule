@@ -15,10 +15,7 @@ internal fun agentSettingsPage(value: String?): SettingsPage? = when (value) {
     "GENERAL" -> SettingsPage.General
     "LIQUID_GLASS" -> SettingsPage.LiquidGlass
     "WIDGETS" -> SettingsPage.Widgets
-    "AI_IMPORT" -> SettingsPage.AiImport
-    "DAY_AGENT" -> SettingsPage.DayAgent
     "SCHEDULE" -> SettingsPage.Schedule
-    "AUTO_REFRESH_SCHEDULE" -> SettingsPage.AutoRefreshSchedule
     "NOTIFICATIONS" -> SettingsPage.Notifications
     "SCHEDULE_MANAGER" -> SettingsPage.ScheduleManager
     "BACKUP_RESTORE" -> SettingsPage.BackupRestore
@@ -26,7 +23,6 @@ internal fun agentSettingsPage(value: String?): SettingsPage? = when (value) {
     "ABOUT" -> SettingsPage.About
     "CHANGELOG" -> SettingsPage.Changelog
     "DOWNLOAD" -> SettingsPage.SoftwareUpdate
-    "DONATE" -> SettingsPage.Donate
     "PRIVACY_POLICY" -> SettingsPage.PrivacyPolicy
     else -> null
 }

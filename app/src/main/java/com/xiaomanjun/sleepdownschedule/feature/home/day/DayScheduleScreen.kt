@@ -60,11 +60,7 @@ import com.xiaomanjun.sleepdownschedule.core.ui.designsystem.SleepDownTimeSectio
 import com.xiaomanjun.sleepdownschedule.core.ui.text.LocalCourseTextMotionFrozen
 import com.xiaomanjun.sleepdownschedule.courseEndTime
 import com.xiaomanjun.sleepdownschedule.courseStartTime
-import com.xiaomanjun.sleepdownschedule.domain.agent.AgentActionHandler
 import com.xiaomanjun.sleepdownschedule.effectiveCurrentWeek
-import com.xiaomanjun.sleepdownschedule.feature.agent.DayAgentBackgroundMotionState
-import com.xiaomanjun.sleepdownschedule.feature.agent.TodayAgentHost
-import com.xiaomanjun.sleepdownschedule.feature.agent.homeCountdownShockwave
 import com.xiaomanjun.sleepdownschedule.feature.home.HomeAdaptiveMetrics
 import com.xiaomanjun.sleepdownschedule.feature.home.HomeDayPageDrawingScope
 import com.xiaomanjun.sleepdownschedule.core.ui.text.LocalHomeBackgroundFrozen
@@ -114,7 +110,6 @@ internal fun shouldRenderSecondaryDay(
 @Composable
 internal fun DayScheduleScreen(
     state: AppState,
-    agentState: AppState = state,
     adaptiveMetrics: HomeAdaptiveMetrics,
     displayDate: LocalDate,
     displayWeek: Int,
@@ -122,19 +117,11 @@ internal fun DayScheduleScreen(
     cardColor: ComposeColor,
     textColor: ComposeColor,
     backdrop: Backdrop?,
-    dayAgentBackdrop: Backdrop? = backdrop,
     onSwipeDay: (Int) -> Unit,
     onContentUnderTopBarChange: (Boolean) -> Unit,
     onRenderedCardCountChanged: (Int) -> Unit = {},
-    dayAgentBackgroundMotionState: DayAgentBackgroundMotionState,
-    onAgentPagerSettledChange: (Boolean) -> Unit,
-    onAgentPrepareOpen: suspend () -> Unit,
-    onAgentDismissed: () -> Unit,
     onCourseClick: (CourseEntity, Int, Rect?) -> Unit,
     onAddCourse: (CourseEntity) -> Unit,
-    onAgentAction: AgentActionHandler,
-    onAgentImportFile: ((List<android.net.Uri>) -> Unit)? = null,
-    versionWelcomeVisible: Boolean = false,
 ) {
     val centerPage = 10_000
     val anchorDate = remember { displayDate }
@@ -152,22 +139,6 @@ internal fun DayScheduleScreen(
     fun clampToNavigationRange(date: LocalDate): LocalDate {
         val range = navigationRange ?: return date
         return date.coerceIn(range.start, range.endInclusive)
-    }
-
-    val paneVisible = LocalHomePaneVisible.current
-    val currentPagerSettledChange by rememberUpdatedState(onAgentPagerSettledChange)
-    LaunchedEffect(pagerState, displayDate, paneVisible) {
-        snapshotFlow {
-            paneVisible.value && !pagerState.isScrollInProgress &&
-                pagerState.currentPage == pagerState.settledPage &&
-                kotlin.math.abs(pagerState.currentPageOffsetFraction) < 0.0005f &&
-                dateForPage(pagerState.settledPage) == displayDate
-        }.distinctUntilChanged().collect {
-            currentPagerSettledChange(it)
-        }
-    }
-    DisposableEffect(Unit) {
-        onDispose { onAgentPagerSettledChange(false) }
     }
 
     // Commit only settled pages. Publishing at 75% rebuilt the date's cards while flinging.
@@ -273,7 +244,6 @@ internal fun DayScheduleScreen(
             val contentUnderTopBar by remember {
                 derivedStateOf { listState.firstVisibleItemIndex > 0 || listState.firstVisibleItemScrollOffset > 0 }
             }
-            val agentCollapsed by remember { mutableStateOf(false) }
             LaunchedEffect(contentUnderTopBar, pagerState.settledPage, onContentUnderTopBarChange) {
                 if (page == pagerState.settledPage) {
                     onContentUnderTopBarChange(contentUnderTopBar)
@@ -297,27 +267,6 @@ internal fun DayScheduleScreen(
                             config = state.config,
                             special = todayTimeline.exceptionalActivePeriod
                         )
-                    }
-                }
-            }
-            val agentContent: @Composable () -> Unit = {
-                if (isToday && abs(page - pagerState.currentPage) <= 1) {
-                    val active = paneVisible.value && page == pagerState.settledPage
-                    Box(Modifier.homeSwitchGroup()) {
-                    TodayAgentHost(
-                        state = agentState,
-                        date = targetDate,
-                        backdrop = dayAgentBackdrop,
-                        textColor = textColor,
-                        collapsed = agentCollapsed,
-                        isActive = active,
-                        backgroundMotionState = dayAgentBackgroundMotionState,
-                        onPrepareOpen = onAgentPrepareOpen,
-                        onAgentDismissed = onAgentDismissed,
-                        onAgentAction = onAgentAction,
-                        onImportFile = onAgentImportFile,
-                        showEnablePrompt = active && !versionWelcomeVisible,
-                    )
                     }
                 }
             }
@@ -508,7 +457,6 @@ internal fun DayScheduleScreen(
                         verticalArrangement = Arrangement.spacedBy(12.dp)
                     ) {
                         headerContent()
-                        agentContent()
                     }
                     SleepDownLazyColumn(
                         modifier = Modifier
@@ -544,9 +492,6 @@ internal fun DayScheduleScreen(
                         verticalArrangement = Arrangement.spacedBy(12.dp)
                     ) {
                         item { headerContent() }
-                        if (isToday && abs(page - pagerState.currentPage) <= 1) {
-                            item(key = "today-agent-${state.config.id}") { agentContent() }
-                        }
                         courseList()
                     }
                 }
@@ -624,8 +569,7 @@ private fun DayDateSectionHeader(
         modifier = Modifier
             .fillMaxWidth()
             .padding(top = 8.dp, bottom = 2.dp)
-            .homeSwitchGroup()
-            .homeCountdownShockwave(0.75f),
+            .homeSwitchGroup(),
         contentAlignment = Alignment.Center
     ) {
         DayStatusGlassPill(
@@ -648,7 +592,7 @@ private fun DayPartHeader(
         val end = courses.mapNotNull { courseEndTime(it, periods) }.maxOrNull()
         if (start != null && end != null) "$start–$end" else null
     }
-    SleepDownTimeSectionDivider(modifier = Modifier.homeSwitchGroup().homeCountdownShockwave(0.75f), textColor = textColor, label = {
+    SleepDownTimeSectionDivider(modifier = Modifier.homeSwitchGroup(), textColor = textColor, label = {
         HomeReadableText(
             text = dayPartLabel(part),
             style = MaterialTheme.typography.titleSmall,

@@ -51,7 +51,6 @@ import com.xiaomanjun.sleepdownschedule.core.wallpaper.WallpaperCropState
 import com.xiaomanjun.sleepdownschedule.core.wallpaper.WallpaperPreviewOrientation
 import com.xiaomanjun.sleepdownschedule.core.wallpaper.calculateFocusCropRect
 import com.xiaomanjun.sleepdownschedule.core.wallpaper.wallpaperCropState
-import com.xiaomanjun.sleepdownschedule.feature.agent.homeCountdownShockwave
 import com.xiaomanjun.sleepdownschedule.feature.home.LocalHomePaneVisible
 import com.xiaomanjun.sleepdownschedule.core.ui.text.LocalHomeBackgroundFrozen
 import com.xiaomanjun.sleepdownschedule.core.ui.text.LocalHomeTextContrastFrozen
@@ -207,7 +206,7 @@ fun HomeReadableText(
         { value: androidx.compose.ui.layout.LayoutCoordinates -> currentPositioned.value(value) }
     }
     val onLayout = remember { { value: TextLayoutResult -> currentTextLayout.value(value) } }
-    Box(modifier = modifier.homeCountdownShockwave(0.55f)) {
+    Box(modifier = modifier) {
         BasicText(
             text = text,
             modifier = Modifier.onGloballyPositioned(onPositioned),

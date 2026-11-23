@@ -1,16 +1,9 @@
 package com.xiaomanjun.sleepdownschedule
 
-import com.xiaomanjun.sleepdownschedule.feature.importing.ManagedAiRemoteConfig
-import com.xiaomanjun.sleepdownschedule.feature.importing.AiImportSettingsStore
 import com.xiaomanjun.sleepdownschedule.app.ui.*
 import com.xiaomanjun.sleepdownschedule.feature.schedule.*
-import com.xiaomanjun.sleepdownschedule.feature.schedule.autorefresh.AutoRefreshScheduleStore
-import com.xiaomanjun.sleepdownschedule.feature.schedule.autorefresh.AutoRefreshScheduleWorker
-import com.xiaomanjun.sleepdownschedule.feature.schedule.autorefresh.AutoRefreshWebSession
 
-import com.xiaomanjun.sleepdownschedule.core.remoteconfig.SleepDownRemoteConfig
 import com.xiaomanjun.sleepdownschedule.core.performance.*
-import com.xiaomanjun.sleepdownschedule.core.remoteconfig.*
 import com.xiaomanjun.sleepdownschedule.core.wallpaper.*
 import com.xiaomanjun.sleepdownschedule.feature.reminder.NotificationScheduler
 import com.xiaomanjun.sleepdownschedule.feature.reminder.LegacyDndStateReceiver
@@ -38,7 +31,6 @@ import java.io.File
 import java.time.LocalDate
 import com.xiaomanjun.sleepdownschedule.core.identity.AppIconManager
 import com.xiaomanjun.sleepdownschedule.feature.backup.BackupRestoreService
-import com.xiaomanjun.sleepdownschedule.feature.agent.DayAgentRepository
 import com.xiaomanjun.sleepdownschedule.feature.widget.WidgetAppearanceRepository
 import com.xiaomanjun.sleepdownschedule.feature.coloros.ColorOSCourseBridge
 import com.xiaomanjun.sleepdownschedule.feature.experimental.XiaomiSuperIsland
@@ -67,28 +59,18 @@ class CourseScheduleApp : Application() {
     override fun onCreate() {
         super.onCreate()
         AppMaterialPreferences.load(this)
-        com.xiaomanjun.sleepdownschedule.feature.importing.chatgpt.ChatGptAuthManager.initialize(this)
         AppIconManager.onIconApplied = { changed ->
-            NotificationScheduler.refreshLiveUpdateIcon(this)
-            if (changed) TodayCoursesWidgetProvider.refreshAll(this)
+            // Keep the first frame free of notification/widget work; both only repaint
+            // launcher-facing surfaces and never block the Activity.
+            applicationScope.launch(Dispatchers.IO) {
+                runCatching { NotificationScheduler.refreshLiveUpdateIcon(this@CourseScheduleApp) }
+                if (changed) runCatching { TodayCoursesWidgetProvider.refreshAll(this@CourseScheduleApp) }
+            }
         }
         AppIconManager.applyStoredMode(this)
-        val refreshProfile = AutoRefreshScheduleStore.load(this)
-        refreshProfile?.browserProfileName?.let { name ->
-            runCatching { AutoRefreshWebSession.pruneRetiredProfiles(name) }
-        }
-        AutoRefreshScheduleWorker.ensureSchedule(this, refreshProfile)
+        // 自动刷新课表已移除；启动时不再恢复教务刷新任务或清理其浏览器配置。
         com.xiaomanjun.sleepdownschedule.feature.backup.webdav.WebDavAutomation.schedule(this)
-        SleepDownRemoteConfig.initialize(this, applicationScope,
-            onBootstrapLoaded = { appContext ->
-                com.xiaomanjun.sleepdownschedule.data.ai.FreeAiQuotaStore.syncBootstrapPolicy(
-                    context = appContext,
-                    policy = SleepDownRemoteConfig.state.value.bootstrap?.aiQuota,
-                    serverTimeSeconds = SleepDownRemoteConfig.estimatedServerTimeSeconds()
-                )
-                ManagedAiRemoteConfig.activateResolvedProvider(appContext)
-            },
-            onBootstrapUpdated = AiImportSettingsStore::notifyRemoteConfigChanged)
+        // 远程配置（协议/公告）不再在启动时拉取：减少首屏网络与解密开销，也不再弹欢迎窗口。
         ActivityTransitionCoordinator.install(this)
         if (BuildConfig.SLEEPDOWN_EXPERIMENTAL_FEATURES) ColorOSCourseBridge.install(this, database)
         if (BuildConfig.SLEEPDOWN_EXPERIMENTAL_FEATURES) {
@@ -230,11 +212,6 @@ class CourseScheduleApp : Application() {
             widgetAppearanceRepository.cleanupUnreferencedFiles()
         }.onFailure { error ->
             Log.w("CourseScheduleApp", "Widget wallpaper cleanup failed", error)
-        }
-        runCatching {
-            DayAgentRepository(this).cleanup(LocalDate.now())
-        }.onFailure { error ->
-            Log.w("CourseScheduleApp", "Agent history cleanup failed", error)
         }
     }
 

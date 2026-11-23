@@ -1,22 +1,16 @@
 package com.xiaomanjun.sleepdownschedule.feature.backup
 
-import com.xiaomanjun.sleepdownschedule.feature.importing.*
-
-import com.xiaomanjun.sleepdownschedule.*
-import com.xiaomanjun.sleepdownschedule.feature.agent.*
-
-import com.xiaomanjun.sleepdownschedule.core.identity.AppIconManager
-
 import android.content.Context
 import java.io.File
+import com.xiaomanjun.sleepdownschedule.feature.agent.DayAgentPreferences
+import com.xiaomanjun.sleepdownschedule.core.identity.AppIconManager
 
-/** Applies only the protocol's non-secret preference whitelist after the Room commit. */
 object BackupPreferencesApplier {
     fun apply(
         context: Context,
         preferences: BackupPreferences,
         scheduleRoomIdsByStableId: Map<String, Int>,
-        finalAssetFilesById: Map<String, File>
+        finalAssetFilesById: Map<String, File> = emptyMap()
     ) {
         preferences.materialLevel?.let {
             com.xiaomanjun.sleepdownschedule.core.performance.AppMaterialPreferences.setLevel(context,
@@ -28,17 +22,10 @@ object BackupPreferencesApplier {
         preferences.dayAgent?.let {
             DayAgentPreferences.applyBackupPreferences(context, it, scheduleRoomIdsByStableId)
         }
-        preferences.aiImport?.let { AiImportSettingsStore.applyBackupPreferences(context, it) }
         // Scheme preferences from older backups are imported with the Room transaction. Replaying
         // preference finalization must not merge a second copy or resurrect removed schemes.
         preferences.courseQuietSettings?.let {
             com.xiaomanjun.sleepdownschedule.feature.reminder.CourseQuietPreferences.write(context, it)
         }
-        AiImportHistoryStore.applyBackup(
-            context = context,
-            entries = preferences.aiImportHistory,
-            contextFilesByAssetId = finalAssetFilesById,
-            retentionDays = preferences.aiImportHistoryRetentionDays
-        )
     }
 }

@@ -31,10 +31,6 @@ import com.xiaomanjun.sleepdownschedule.core.ui.designsystem.*
 import com.xiaomanjun.sleepdownschedule.platform.coloros.rememberGlowButtonMaterial
 import com.xiaomanjun.sleepdownschedule.platform.coloros.ProvideCouiMaterials
 import com.xiaomanjun.sleepdownschedule.feature.schedule.manager.ScheduleNameDialog
-import com.xiaomanjun.sleepdownschedule.feature.importing.AiImportSettings
-import com.xiaomanjun.sleepdownschedule.feature.importing.AiImportSettingsStore
-import com.xiaomanjun.sleepdownschedule.feature.importing.AiProviderPresets
-import com.xiaomanjun.sleepdownschedule.feature.settings.AiImportSettingsScreen
 import com.xiaomanjun.sleepdownschedule.feature.settings.writeSettingsVisualArtifact
 import com.xiaomanjun.sleepdownschedule.core.ui.material.LocalVisualEffects
 import com.xiaomanjun.sleepdownschedule.core.ui.material.VisualEffectsState
@@ -76,28 +72,6 @@ class CouiMigrationUiTest {
         button.assertIsDisplayed().performClick()
         button.assertIsNotEnabled()
         compose.onNodeWithText("正在测试连接…").assertIsDisplayed()
-    }
-
-    @Test fun aiSettingsOpensWithTheStandardPageAndActionRows() {
-        val config = defaultConfig().copy(darkMode = false, followSystemDarkMode = false)
-        AiImportSettingsStore.save(RuntimeEnvironment.getApplication(), AiImportSettings(AiProviderPresets.deepSeek))
-        compose.setContent {
-            CompositionLocalProvider(LocalVisualEffects provides VisualEffectsState(effectiveMode = VisualEffectMode.ColorOsGlow)) {
-                CouiSettingsPageScaffold(title = "AI 设置", config = config, showBack = true) { _, backdrop ->
-                    AiImportSettingsScreen(state = AppState(config = config), backdrop = backdrop)
-                }
-            }
-        }
-        compose.onNodeWithText("AI 设置").assertIsDisplayed()
-        writeSettingsVisualArtifact("ai-settings-coui-light.png", compose.onRoot().captureToImage().asAndroidBitmap())
-        val list = compose.onNode(hasScrollToIndexAction())
-        val connect = hasText("测试") and hasClickAction()
-        val clear = hasText("清除") and hasClickAction()
-        list.performScrollToNode(connect)
-        compose.onNode(connect).assertIsDisplayed()
-        list.performScrollToNode(clear)
-        compose.onNode(clear).assertIsDisplayed()
-        writeSettingsVisualArtifact("ai-settings-actions-coui-light.png", compose.onRoot().captureToImage().asAndroidBitmap())
     }
 
     @Test fun glowSurfaceUsesTheSuppliedUnderlayAndReleasesItWhenRemoved() {

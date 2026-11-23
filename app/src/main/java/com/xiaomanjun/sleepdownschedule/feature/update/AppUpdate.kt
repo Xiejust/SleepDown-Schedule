@@ -213,8 +213,9 @@ object GiteeAppUpdater {
         }
 
     suspend fun downloadApk(context: Context, release: GiteeReleaseInfo): Result<File> {
-        if (!AppDistribution.supportsSelfUpdate) {
-            return Result.failure(IllegalStateException("当前应用商店发行版不支持应用内 APK 更新"))
+        // 只限制应用自身的自更新；课程组件是独立安装包，不受这条限制影响。
+        if (release.packageKind == DownloadPackageKind.AppUpdate && !AppDistribution.supportsSelfUpdate) {
+            return Result.failure(IllegalStateException("当前发行版不支持应用内 APK 更新，请前往 GitHub Releases 下载"))
         }
         val downloadUrl = release.apkUrl
             ?: return Result.failure(IllegalStateException("这个 Release 没有附带 APK 安装包"))

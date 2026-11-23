@@ -33,7 +33,7 @@ class ShiguangImportSessionCustomTimeTest {
         assertEquals("09:30", draft.courses.last().customEndTime)
         assertEquals("2,08:30-09:30", draft.courses.last().originalPeriodTimes)
         org.junit.Assert.assertNotNull(com.xiaomanjun.sleepdownschedule.feature.importing.importConflictNotice(draft))
-        val stored = com.xiaomanjun.sleepdownschedule.feature.importing.draftToPayload(draft).toString()
+        val stored = com.xiaomanjun.sleepdownschedule.feature.importing.CanonicalScheduleJson.encode(draft)
         val restored = com.xiaomanjun.sleepdownschedule.feature.importing.ScheduleImportParser
             .parseStoredDraft(stored, draft.config).getOrThrow()
         assertEquals(draft.courses.map { it.customPeriodTimes }, restored.courses.map { it.customPeriodTimes })

@@ -12,7 +12,6 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
-import androidx.compose.runtime.SideEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.key
 import androidx.compose.runtime.mutableStateOf
@@ -35,10 +34,7 @@ import com.kyant.backdrop.Backdrop
 import com.xiaomanjun.sleepdownschedule.AppState
 import com.xiaomanjun.sleepdownschedule.CourseEntity
 import com.xiaomanjun.sleepdownschedule.core.ui.interaction.rememberHapticMiuixOverscrollFactory
-import com.xiaomanjun.sleepdownschedule.domain.agent.AgentActionHandler
 import com.xiaomanjun.sleepdownschedule.effectiveCurrentWeek
-import com.xiaomanjun.sleepdownschedule.feature.agent.DayAgentBackgroundMotionState
-import com.xiaomanjun.sleepdownschedule.feature.agent.LocalHomeAssistant
 import com.xiaomanjun.sleepdownschedule.feature.home.HomeAdaptiveMetrics
 import com.xiaomanjun.sleepdownschedule.feature.home.HomeSwitchMotion
 import com.xiaomanjun.sleepdownschedule.feature.home.HomeSwitchPane
@@ -57,7 +53,6 @@ import java.time.LocalDate
 @Composable
 internal fun HomeScreen(
     state: AppState,
-    agentState: AppState = state,
     personalizationPreviewState: PersonalizationPreviewState,
     mode: HomeMode,
     dayViewMode: DayViewMode,
@@ -68,7 +63,6 @@ internal fun HomeScreen(
     returnToCurrentWeekRequest: Int = 0,
     displayDate: LocalDate,
     backdrop: Backdrop?,
-    dayAgentBackdrop: Backdrop? = backdrop,
     floatingCourseBackdrop: Backdrop? = backdrop,
     weekHeaderBackdrop: Backdrop? = backdrop,
     onSwipeWeek: (Int) -> Unit,
@@ -77,14 +71,8 @@ internal fun HomeScreen(
     onWeekHeaderPreview: (Int?) -> Unit = {},
     onWeekJumpSettled: (Int) -> Unit = {},
     onRenderedCardCountChanged: (HomeMode, Int) -> Unit = { _, _ -> },
-    dayAgentBackgroundMotionState: DayAgentBackgroundMotionState,
-    onAgentPagerSettledChange: (Boolean) -> Unit = {},
-    onAgentPrepareOpen: suspend () -> Unit = {},
-    onAgentDismissed: () -> Unit = {},
     onCourseClick: (CourseEntity, Int, Rect?) -> Unit,
     onAddCourse: (CourseEntity) -> Unit = {},
-    onAgentAction: AgentActionHandler = { _, _ -> },
-    onAgentImportFile: ((List<android.net.Uri>) -> Unit)? = null,
     onUpdateCourseSingleWeek: (CourseEntity, CourseEntity, Int) -> Unit = { _, _, _ -> },
     conflictFocusCourseId: Long? = null,
     conflictFocusCourseKey: String? = null,
@@ -93,7 +81,6 @@ internal fun HomeScreen(
     onScheduleLongPress: () -> Unit = {},
     weekEditInteractionEnabled: Boolean = true,
     modeMotion: HomeSwitchMotion = rememberHomeSwitchMotion(mode == HomeMode.Week, "home-mode"),
-    versionWelcomeVisible: Boolean = false,
 ) {
     val modeStateHolder = rememberSaveableStateHolder()
     val homeOverscrollFactory = rememberHapticMiuixOverscrollFactory()
@@ -103,9 +90,6 @@ internal fun HomeScreen(
     val textColor = homeForegroundColor(state.config)
     var weekEditMode by remember(state.config.id) { mutableStateOf(false) }
     LaunchedEffect(mode) { if (mode != HomeMode.Week) weekEditMode = false }
-    val homeAssistant = com.xiaomanjun.sleepdownschedule.feature.agent.LocalHomeAssistant.current
-    SideEffect { homeAssistant?.editing = weekEditMode }
-    DisposableEffect(homeAssistant) { onDispose { homeAssistant?.editing = false } }
     val copyPlacementActive = LocalCourseCopy.current?.active == true
     LaunchedEffect(copyPlacementActive) {
         if (copyPlacementActive) weekEditMode = false
@@ -186,7 +170,6 @@ internal fun HomeScreen(
                 ) {
                     DayScheduleScreen(
                         state = state,
-                        agentState = agentState,
                         adaptiveMetrics = adaptiveMetrics,
                         displayDate = displayDate,
                         displayWeek = effectiveCurrentWeek(state.config, displayDate),
@@ -194,19 +177,11 @@ internal fun HomeScreen(
                         cardColor = cardColor,
                         textColor = textColor,
                         backdrop = backdrop,
-                        dayAgentBackdrop = dayAgentBackdrop,
                         onSwipeDay = onSwipeDay,
                         onContentUnderTopBarChange = reportContentUnderTopBar,
                         onRenderedCardCountChanged = { onRenderedCardCountChanged(HomeMode.Day, it) },
-                        dayAgentBackgroundMotionState = dayAgentBackgroundMotionState,
-                        onAgentPagerSettledChange = onAgentPagerSettledChange,
-                        onAgentPrepareOpen = onAgentPrepareOpen,
-                        onAgentDismissed = onAgentDismissed,
                         onCourseClick = onCourseClick,
                         onAddCourse = onAddCourse,
-                        onAgentAction = onAgentAction,
-                        onAgentImportFile = onAgentImportFile,
-                        versionWelcomeVisible = versionWelcomeVisible,
                     )
                 }
                 HomeMode.Week -> key(state.config.id) {

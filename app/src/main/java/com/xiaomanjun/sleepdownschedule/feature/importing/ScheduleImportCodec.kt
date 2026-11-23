@@ -121,6 +121,10 @@ object ScheduleImportParser {
         }
 
     /** Locally serialized artifacts can retain bells already accepted from an official adapter. */
+    /** 本地解析器（如学生课表 HTML）构造好 payload 后，复用同一套校验与周次归一化。 */
+    internal fun buildDraftFromPayload(payload: ScheduleImportPayload, baseConfig: ScheduleConfigEntity): ImportDraft =
+        validatePayload(payload, baseConfig)
+
     internal fun parseStoredDraft(input: String, baseConfig: ScheduleConfigEntity): Result<ImportDraft> = runCatching {
         if (CanonicalScheduleJson.isCanonical(input)) return@runCatching CanonicalScheduleJson.decode(input, baseConfig)
         validatePayload(json.decodeFromString<ScheduleImportPayload>(input), baseConfig, allowImportedBellTimes = true)

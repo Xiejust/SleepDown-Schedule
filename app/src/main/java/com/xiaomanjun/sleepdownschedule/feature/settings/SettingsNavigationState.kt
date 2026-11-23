@@ -10,20 +10,17 @@ import kotlinx.coroutines.flow.map
 internal const val SettingsDetailPageExtra = "settings_page"
 
 enum class SettingsSection { Schedule, Notifications }
-enum class SettingsPage { Root, General, LiquidGlass, Widgets, AiImport, DayAgent, Schedule, PeriodSchemes, SpecialCourses, AutoRefreshSchedule, Notifications, ScheduleManager, BackupRestore, WebDav, BackupPreview, About, Changelog, Donate, PrivacyPolicy, SoftwareUpdate, AutoUpdate, ScheduleAdjustments, Feedback }
+enum class SettingsPage { Root, General, LiquidGlass, Widgets, Schedule, PeriodSchemes, SpecialCourses, Notifications, ScheduleManager, BackupRestore, WebDav, BackupPreview, About, Changelog, PrivacyPolicy, SoftwareUpdate, AutoUpdate, ScheduleAdjustments }
 
 internal fun SettingsPage.title(): String = when (this) {
     SettingsPage.Root -> "设置"
     SettingsPage.General -> "通用设置"
     SettingsPage.LiquidGlass -> "视效设置"
     SettingsPage.Widgets -> "小组件设置"
-    SettingsPage.AiImport -> "AI 设置"
-    SettingsPage.DayAgent -> "AI 助理"
     SettingsPage.Schedule -> "课表设置"
     SettingsPage.PeriodSchemes -> "作息管理"
     SettingsPage.SpecialCourses -> "特殊课程"
     SettingsPage.ScheduleAdjustments -> "调休课表"
-    SettingsPage.AutoRefreshSchedule -> "自动刷新课表"
     SettingsPage.Notifications -> "通知设置"
     SettingsPage.ScheduleManager -> "课表设置"
     SettingsPage.BackupRestore -> "备份与恢复"
@@ -33,8 +30,6 @@ internal fun SettingsPage.title(): String = when (this) {
     SettingsPage.Changelog -> "更新日志"
     SettingsPage.SoftwareUpdate -> "软件更新"
     SettingsPage.AutoUpdate -> "自动更新设置"
-    SettingsPage.Feedback -> "问题反馈"
-    SettingsPage.Donate -> "捐赠支持"
 	SettingsPage.PrivacyPolicy -> "隐私政策"
 }
 
@@ -43,11 +38,9 @@ internal fun SettingsPage.usesPersistentCenteredSettingsTitle(): Boolean = when 
     SettingsPage.Widgets,
     SettingsPage.PeriodSchemes,
     SettingsPage.SpecialCourses,
-    SettingsPage.AutoRefreshSchedule,
     SettingsPage.About,
 	SettingsPage.Changelog,
     SettingsPage.SoftwareUpdate,
-    SettingsPage.Feedback,
     SettingsPage.AutoUpdate,
 	SettingsPage.PrivacyPolicy -> true
     else -> false

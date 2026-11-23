@@ -1083,6 +1083,37 @@ internal object MiuixTodayWidgetRenderer {
     }
 }
 
+private data class AssistantWidgetSlot(val course: CourseEntity, val start: LocalTime, val end: LocalTime)
+
+private fun assistantWidgetSlots(state: AppState, date: LocalDate): List<AssistantWidgetSlot> {
+    val config = state.config
+    if (com.xiaomanjun.sleepdownschedule.domain.schedule.scheduleWeekForDateOrNull(config, date) == null) {
+        return emptyList()
+    }
+    val teachingDate = com.xiaomanjun.sleepdownschedule.domain.schedule.teachingDateForSchedule(config, date)
+        ?: return emptyList()
+    val week = if (teachingDate != date) {
+        com.xiaomanjun.sleepdownschedule.domain.schedule.adjustedTeachingWeekForDate(config, teachingDate)
+            ?: com.xiaomanjun.sleepdownschedule.domain.schedule.scheduleWeekForDateOrNull(config, date)
+    } else {
+        com.xiaomanjun.sleepdownschedule.domain.schedule.scheduleWeekForDateOrNull(config, date)
+    } ?: return emptyList()
+    val periods = state.periods.filter { it.scheduleId == config.id }
+    return state.courses.asSequence()
+        .filter { it.scheduleId == config.id }
+        .filter { it.weekday == teachingDate.dayOfWeek.value && week in it.weeks &&
+            com.xiaomanjun.sleepdownschedule.domain.schedule.parityMatches(it.weekParity, week) }
+        .mapNotNull { course ->
+            val start = com.xiaomanjun.sleepdownschedule.domain.schedule.courseStartTime(course, periods)
+                ?: return@mapNotNull null
+            val end = com.xiaomanjun.sleepdownschedule.domain.schedule.courseEndTime(course, periods)
+                ?: return@mapNotNull null
+            AssistantWidgetSlot(course, start, end)
+        }
+        .sortedBy { it.start }
+        .toList()
+}
+
 internal object TodayAssistantWidgetRenderer {
     private const val AccentLight = 0xFF006EDC.toInt()
     private const val AccentDark = 0xFF62B5FF.toInt()
@@ -1134,27 +1165,21 @@ internal object TodayAssistantWidgetRenderer {
     ): RemoteViews {
         val zone = ZoneId.systemDefault()
         val now = LocalDateTime.now(zone)
-        val facts = buildDayAgentFacts(
-            courses = state.courses,
-            periods = state.periods,
-            config = state.config,
-            date = now.toLocalDate(),
-            weather = weather,
-            now = now
-        )
-        val current = facts.today.firstOrNull { !now.toLocalTime().isBefore(it.start) && now.toLocalTime().isBefore(it.end) }
-        val next = facts.today.firstOrNull { now.toLocalTime().isBefore(it.start) }
-        val currentSlots = facts.today.filter {
+        val todaySlots = assistantWidgetSlots(state, now.toLocalDate())
+        val tomorrowSlots = assistantWidgetSlots(state, now.toLocalDate().plusDays(1))
+        val current = todaySlots.firstOrNull { !now.toLocalTime().isBefore(it.start) && now.toLocalTime().isBefore(it.end) }
+        val next = todaySlots.firstOrNull { now.toLocalTime().isBefore(it.start) }
+        val currentSlots = todaySlots.filter {
             !now.toLocalTime().isBefore(it.start) && now.toLocalTime().isBefore(it.end)
         }
         val nextSlots = next?.let { firstNext ->
-            facts.today.filter { it.start == firstNext.start }
+            todaySlots.filter { it.start == firstNext.start }
         }.orEmpty()
         val previewTomorrow = now.toLocalTime() >= LocalTime.of(22, 0) &&
             current == null &&
             next == null &&
-            facts.tomorrow.isNotEmpty()
-        val focus = current ?: next ?: facts.tomorrow.firstOrNull().takeIf { previewTomorrow }
+            tomorrowSlots.isNotEmpty()
+        val focus = current ?: next ?: tomorrowSlots.firstOrNull().takeIf { previewTomorrow }
         val focusSlots = when {
             current != null -> currentSlots
             next != null -> nextSlots
@@ -1169,7 +1194,7 @@ internal object TodayAssistantWidgetRenderer {
             current != null -> "当前"
             next != null -> "下节课"
             previewTomorrow -> "明日首课"
-            facts.today.isEmpty() -> "今日无课"
+            todaySlots.isEmpty() -> "今日无课"
             else -> "课程已结束"
         }
         val countdown = when {
@@ -1177,7 +1202,7 @@ internal object TodayAssistantWidgetRenderer {
             next != null && remaining != null && now.toLocalTime() >= LocalTime.of(6, 0) ->
                 "${remaining} 分钟后"
             previewTomorrow -> ""
-            facts.today.isEmpty() -> "轻松一天"
+            todaySlots.isEmpty() -> "轻松一天"
             else -> "今日完成"
         }
         val detail = focus?.course?.let { course ->
@@ -1235,9 +1260,9 @@ internal object TodayAssistantWidgetRenderer {
             setTextViewText(
                 R.id.widget_agent_count,
                 if (previewTomorrow) {
-                    "明天有 ${facts.tomorrow.size} 节课"
+                    "明天有 ${tomorrowSlots.size} 节课"
                 } else {
-                    "今天有 ${facts.today.size} 节课"
+                    "今天有 ${todaySlots.size} 节课"
                 }
             )
             setTextViewText(R.id.widget_agent_weather, weatherText)

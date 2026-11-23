@@ -9,19 +9,6 @@ import java.time.LocalDate
 import kotlinx.serialization.json.jsonObject
 
 class CanonicalScheduleJsonTest {
-    @Test fun aiSubmissionUsesTheSamePublicContractAsFilesAndRepair() {
-        val schema=scheduleImportChatTool()["function"]!!.jsonObject["parameters"]!!.jsonObject
-        val properties=schema["properties"]!!.jsonObject
-        assertTrue(properties.keys.containsAll(listOf("courses","timeSlots","config","comboSchedule")))
-        assertFalse("schemaVersion" in properties || "scheduleConfig" in properties)
-        val payload="""{"courses":[{"name":"实验","teacher":"","position":"B楼","day":2,"weeks":[1,3],"isCustomTime":true,"customStartTime":"08:20","customEndTime":"10:00","credit":2}],"timeSlots":[{"number":1,"startTime":"08:00","endTime":"08:45"}],"config":{"semesterTotalWeeks":16},"comboSchedule":null,"changeSummary":"保留实验真实时刻"}"""
-        val result=ScheduleImportParser.parseAiResponse(payload,config).getOrThrow()
-        assertEquals("08:20",result.courses.single().customStartTime)
-        assertTrue(result.courses.single().periods.isEmpty())
-        assertEquals(2f,result.courses.single().credit)
-        val prompt=AiImportRepairManager.buildRepairPrompt(payload,AiImportRepairManager.classifyFailure("{}",IllegalArgumentException("courses")))
-        assertTrue(prompt.contains("timeSlots") && prompt.contains("isCustomTime"))
-    }
     private val config = defaultConfig().copy(totalWeeks=16,termStartDate="2026-08-31")
     private val base = listOf(PeriodEntity(1,"08:00","08:45",alias="早一"),PeriodEntity(2,"08:55","09:40"),PeriodEntity(3,"10:00","10:45"))
     private val course = CourseEntity(name="实验课",teacher="教师",location="B楼",weekday=1,periods=listOf(1,3),weeks=listOf(1,3,5),weekParity=WeekParity.ALL,note="备注",credit=2.5f,sourcePaletteIndex=3)

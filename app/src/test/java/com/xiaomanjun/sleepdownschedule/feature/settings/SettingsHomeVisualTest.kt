@@ -40,7 +40,7 @@ class SettingsHomeVisualTest {
 
     private fun checkHome(native: Boolean) {
         val app = RuntimeEnvironment.getApplication()
-        app.applicationInfo.nonLocalizedLabel = "SleepDown课程表"
+        app.applicationInfo.nonLocalizedLabel = "AHMU课程表"
         val config = defaultConfig().copy(darkMode = true, followSystemDarkMode = false)
         compose.setContent {
             MaterialTheme(colorScheme = darkColorScheme()) {
@@ -67,7 +67,7 @@ class SettingsHomeVisualTest {
         assertEquals(26, android.graphics.Color.red(corner))
         val outside = pixels.getPixel((row.left + 4.5f * density).toInt(), (row.top + 6 * density).toInt())
         assertEquals(0, android.graphics.Color.red(outside))
-        val title = compose.onNodeWithText("SleepDown课程表", useUnmergedTree = true).fetchSemanticsNode().boundsInRoot
+        val title = compose.onNodeWithText("AHMU课程表", useUnmergedTree = true).fetchSemanticsNode().boundsInRoot
         val version = compose.onNodeWithText("版本", substring = true, useUnmergedTree = true).fetchSemanticsNode().boundsInRoot
         assertTrue(version.top >= title.bottom)
         assertEquals(title.left, version.left, 1f)

@@ -122,17 +122,13 @@ internal fun SoftwareUpdateSettingsScreen(
 @Composable
 internal fun SoftwareUpdateMenu(
     backdrop: Backdrop?,
-    onReplayWelcome: () -> Unit,
     onOpenPage: (SettingsPage) -> Unit,
 ) {
-    val highlights = stringResource(R.string.software_update_view_highlights)
     val compact = LocalConfiguration.current.screenWidthDp < 600
     val dark = compact || CouiTheme.isDark
     val openPage by rememberUpdatedState(onOpenPage)
-    val replay by rememberUpdatedState(onReplayWelcome)
-    val actions = remember(highlights) {
+    val actions = remember {
         buildList {
-            add(AddMenuAction(label = highlights) { replay() })
             if (AppDistribution.supportsSelfUpdate) {
                 add(AddMenuAction(label = "自动更新设置") { openPage(SettingsPage.AutoUpdate) })
             }
@@ -196,7 +192,7 @@ internal fun SoftwareUpdatePageContent(
     val compact = screenWidth < 600
     val statusAction: Pair<String, () -> Unit>? = when {
         release != null -> null
-        dialog == null -> "检查更新" to onRetry
+        dialog == null -> (if (AppDistribution.supportsSelfUpdate) "检查更新" else "前往 GitHub 下载") to onRetry
         dialog is AppUpdateDialog.UpToDate && compact -> "重新检查" to onRetry
         dialog is AppUpdateDialog.Error -> "重试" to onRetry
         else -> null

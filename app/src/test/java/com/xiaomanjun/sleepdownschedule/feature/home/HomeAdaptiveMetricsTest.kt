@@ -4,8 +4,6 @@ import androidx.compose.ui.unit.IntSize
 import androidx.compose.ui.unit.dp
 import com.xiaomanjun.sleepdownschedule.core.ui.chrome.HomeInitialTopInset
 import com.xiaomanjun.sleepdownschedule.core.ui.chrome.HomeTopOverlayHeight
-import com.xiaomanjun.sleepdownschedule.feature.agent.tabletDayAgentConversationSourceRect
-import com.xiaomanjun.sleepdownschedule.feature.agent.tabletDayAgentConversationTargetRect
 import com.xiaomanjun.sleepdownschedule.feature.home.*
 import com.xiaomanjun.sleepdownschedule.feature.home.day.*
 import com.xiaomanjun.sleepdownschedule.feature.home.overlay.*
@@ -86,35 +84,6 @@ class HomeAdaptiveMetricsTest {
         assertTrue(metrics.daySidePaneWidth >= metrics.screenWidth * 0.38f)
         assertTrue(metrics.tabletContentMargin >= 38.dp)
         assertTrue(metrics.tabletContentTop < HomeInitialTopInset)
-    }
-
-    @Test
-    fun tabletAgentConversationOnlyGrowsDownFromSourceCard() {
-        val source = androidx.compose.ui.geometry.Rect(60f, 230f, 760f, 450f)
-        val target = tabletDayAgentConversationTargetRect(
-            source = source,
-            windowHeightPx = 1600f,
-            density = 2f,
-            safeBottom = 24.dp
-        )
-
-        assertEquals(source.left, target.left, 0.01f)
-        assertEquals(474f, target.top, 0.01f)
-        assertEquals(source.right, target.right, 0.01f)
-        assertEquals(1482f, target.bottom, 0.01f)
-        assertTrue(target.height > source.height)
-    }
-
-    @Test
-    fun tabletAgentConversationStartsFromSlotHiddenBehindCard() {
-        val card = androidx.compose.ui.geometry.Rect(60f, 230f, 760f, 450f)
-        val source = tabletDayAgentConversationSourceRect(card, density = 2f)
-
-        assertEquals(card.center.x, source.center.x, 0.01f)
-        assertEquals(430f, source.top, 0.01f)
-        assertEquals(72f, source.width, 0.01f)
-        assertEquals(16f, source.height, 0.01f)
-        assertTrue(source.bottom < card.bottom)
     }
 
     @Test

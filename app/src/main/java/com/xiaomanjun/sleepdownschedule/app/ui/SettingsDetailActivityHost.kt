@@ -68,13 +68,8 @@ import com.xiaomanjun.sleepdownschedule.defaultConfig
 import com.xiaomanjun.sleepdownschedule.defaultPeriods
 import com.xiaomanjun.sleepdownschedule.feature.backup.BackupRestorePreviewScreen
 import com.xiaomanjun.sleepdownschedule.feature.backup.BackupRestoreSettingsScreen
-import com.xiaomanjun.sleepdownschedule.feature.importing.DonateSettingsScreen
 import com.xiaomanjun.sleepdownschedule.feature.schedule.ScheduleSnapshotStore
-import com.xiaomanjun.sleepdownschedule.feature.schedule.autorefresh.AutoRefreshScheduleStore
 import com.xiaomanjun.sleepdownschedule.feature.schedule.manager.ScheduleManagerScreen
-import com.xiaomanjun.sleepdownschedule.feature.settings.AiImportSettingsScreen
-import com.xiaomanjun.sleepdownschedule.feature.settings.AutoRefreshScheduleSettingsScreen
-import com.xiaomanjun.sleepdownschedule.feature.settings.DayAgentSettingsScreen
 import com.xiaomanjun.sleepdownschedule.feature.settings.GeneralSettingsScreen
 import com.xiaomanjun.sleepdownschedule.feature.settings.PeriodSchemeManagementScreen
 import com.xiaomanjun.sleepdownschedule.feature.settings.TimeSlotCourseManagementScreen
@@ -93,7 +88,6 @@ import com.xiaomanjun.sleepdownschedule.feature.settings.SettingsSection
 import com.xiaomanjun.sleepdownschedule.feature.settings.VisualEffectsSettingsScreen
 import com.xiaomanjun.sleepdownschedule.feature.settings.about.AutoUpdateSettingsScreen
 import com.xiaomanjun.sleepdownschedule.feature.settings.about.ChangelogSettingsScreen
-import com.xiaomanjun.sleepdownschedule.feature.feedback.FeedbackScreen
 import com.xiaomanjun.sleepdownschedule.feature.settings.about.ColorOsAboutSettingsScreen
 import com.xiaomanjun.sleepdownschedule.feature.settings.about.SoftwareUpdateMenu
 import com.xiaomanjun.sleepdownschedule.feature.settings.about.SoftwareUpdateSettingsScreen
@@ -133,10 +127,6 @@ open class SettingsDetailActivityHost : ComponentActivity() {
         val creatingTimeSlotCourse = isTimeSlotEditor && timeSlotOriginalJson.isEmpty()
         if (isTimeSlotEditor) timeSlotHandoffToken = intent.getLongExtra(TimeSlotCourseStateTokenExtra, 0L)
         val timeSlotInitialState = TimeSlotCourseStateHandoff.get(timeSlotHandoffToken)?.state
-        if (intent.getStringExtra(SettingsDetailPageExtra) == SettingsPage.AutoRefreshSchedule.name) {
-            // Match the education picker before the first window layout, not after composition.
-            window.setSoftInputMode(WindowManager.LayoutParams.SOFT_INPUT_ADJUST_NOTHING)
-        }
         val useEntrySnapshot = intent.getBooleanExtra(ScheduleEntrySnapshotExtra, false)
         setContent {
             val app = application as CourseScheduleApp
@@ -219,11 +209,6 @@ open class SettingsDetailActivityHost : ComponentActivity() {
                 var timeSlotDeleteRequest by remember { mutableIntStateOf(0) }
                 var timeSlotSaveRequest by remember { mutableIntStateOf(0) }
                 var timeSlotCanSave by remember { mutableStateOf(false) }
-                var autoRefreshWarehouseRequest by remember { mutableIntStateOf(0) }
-                val autoRefreshProfile = if (section == SettingsPage.AutoRefreshSchedule) {
-                    AutoRefreshScheduleStore.observe(this@SettingsDetailActivityHost)
-                        .collectAsStateWithLifecycle().value
-                } else null
                 var widgetEditorVisible by remember { mutableStateOf(false) }
                 var interceptSystemBack by remember(section) { mutableStateOf(false) }
                 // Anchored entries share the same destination-side Morph host; ordinary settings
@@ -233,8 +218,7 @@ open class SettingsDetailActivityHost : ComponentActivity() {
                 fun openSettingsPage(page: SettingsPage) {
                     ActivityTransitionCoordinator.openImmediate(
                         this@SettingsDetailActivityHost,
-                        if (page == SettingsPage.Feedback) TransitionRouteId.SettingsToFeedback
-                        else TransitionRouteId.SettingsToSettingsDetail,
+                        TransitionRouteId.SettingsToSettingsDetail,
                         Intent(this@SettingsDetailActivityHost, SettingsDetailActivity::class.java)
                             .putExtra(SettingsDetailPageExtra, page.name)
                     )
@@ -257,10 +241,6 @@ open class SettingsDetailActivityHost : ComponentActivity() {
                 )
                 Box(Modifier.fillMaxSize()) {
                 val settingsDetailContent: @Composable () -> Unit = content@{
-                if (section == SettingsPage.Feedback) {
-                    FeedbackScreen(pageConfig, onBack = requestExit)
-                    return@content
-                }
                 DetailActivityScaffold(
                     title = if (isTimeSlotEditor) {
                         if (creatingTimeSlotCourse) "添加特殊课程" else "编辑特殊课程"
@@ -291,22 +271,9 @@ open class SettingsDetailActivityHost : ComponentActivity() {
                                 Icon(CouiIcons.Delete, "删除特殊课程", Modifier.size(20.dp),
                                     tint = CouiTheme.colorScheme.onSurface)
                             }
-                        } else if (section == SettingsPage.AutoRefreshSchedule && autoRefreshProfile == null) {
-                            TopGlassIconButton(
-                                backdrop = topBackdrop,
-                                config = settingsVisualConfig(state.config),
-                                iconRes = R.drawable.ic_refresh,
-                                contentDescription = "更新自动刷新适配列表",
-                                onClick = { autoRefreshWarehouseRequest++ },
-                                modifier = Modifier.size(SleepDownDesignTokens.SecondaryPage.BackButtonSize),
-                                buttonHeight = 42.dp
-                            )
                         } else if (section == SettingsPage.SoftwareUpdate) {
                             SoftwareUpdateMenu(
                                 topBackdrop,
-                                onReplayWelcome = {
-                                    com.xiaomanjun.sleepdownschedule.feature.onboarding.VersionWelcomeEntry.replay(this@SettingsDetailActivityHost)
-                                },
                                 onOpenPage = ::openSettingsPage,
                             )
                         }
@@ -336,11 +303,6 @@ open class SettingsDetailActivityHost : ComponentActivity() {
                             backdrop = backdrop,
                             onEditorVisibilityChange = { widgetEditorVisible = it }
                         )
-                        SettingsPage.AiImport -> AiImportSettingsScreen(
-                            state = state,
-                            backdrop = backdrop
-                        )
-                        SettingsPage.DayAgent -> DayAgentSettingsScreen(state, backdrop)
                         SettingsPage.Schedule, SettingsPage.ScheduleAdjustments -> if (!scheduleEditReady) {
                             Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
                                 androidx.compose.material3.CircularProgressIndicator()
@@ -384,11 +346,6 @@ open class SettingsDetailActivityHost : ComponentActivity() {
                                 onExitInterceptionChange = { interceptSystemBack = it }
                             )
                         }
-                        SettingsPage.AutoRefreshSchedule -> AutoRefreshScheduleSettingsScreen(
-                            state = state,
-                            backdrop = backdrop,
-                            warehouseRefreshRequest = autoRefreshWarehouseRequest
-                        )
                         SettingsPage.Notifications -> ScheduleConfigScreen(
                             state = state,
                             backdrop = backdrop,
@@ -399,7 +356,6 @@ open class SettingsDetailActivityHost : ComponentActivity() {
                         SettingsPage.About -> ColorOsAboutSettingsScreen(
                             state = state,
                             backdrop = backdrop,
-                            onDonate = { openSettingsPage(SettingsPage.Donate) },
                             onPrivacyPolicy = { openSettingsPage(SettingsPage.PrivacyPolicy) },
                             onSoftwareUpdate = { openSettingsPage(SettingsPage.SoftwareUpdate) },
                         )
@@ -444,14 +400,12 @@ open class SettingsDetailActivityHost : ComponentActivity() {
                             }
                         }
                         SettingsPage.Changelog -> ChangelogSettingsScreen(state, backdrop)
-                        SettingsPage.Feedback -> Unit
                         SettingsPage.SoftwareUpdate -> SoftwareUpdateSettingsScreen(
                             state, backdrop, showingUpdateNotes, onOpenVersionNotes = { showingUpdateNotes = true },
                         )
                         SettingsPage.AutoUpdate -> AutoUpdateSettingsScreen(
                             state.config, backdrop, onUpdateConfig = viewModel::saveGeneralSettings
                         )
-						SettingsPage.Donate -> DonateSettingsScreen(state, backdrop)
 						SettingsPage.PrivacyPolicy -> PrivacyPolicySettingsScreen(state, backdrop)
                         SettingsPage.ScheduleManager -> ScheduleManagerScreen(
                             state = state, backdrop = backdrop,

@@ -73,7 +73,7 @@ class BackupRestoreService(
                 messageIds = database.agentDao().getAllMessages().mapTo(linkedSetOf()) { it.id },
                 hasPreferences = knownPreferenceFiles.any {
                     appContext.getSharedPreferences(it, Context.MODE_PRIVATE).all.isNotEmpty()
-                } || AiImportHistoryStore.loadForBackup(appContext).isNotEmpty(),
+                },
                 hasWidgetAppearances = database.widgetAppearanceDao().getAll().isNotEmpty()
             )
         }
@@ -383,10 +383,6 @@ class BackupRestoreService(
             val directory = File(appContext.filesDir, "agent_attachments")
             val existing = directory.listFiles().orEmpty().filter(File::isFile).mapTo(linkedSetOf()) { it.name }
             orphanedAgentAttachmentNames(existing, referenced).forEach { File(directory, it).delete() }
-        }
-        guarded("AI history context 清理失败") {
-            val retained = journal.readPreferences().aiImportHistory.mapTo(linkedSetOf()) { it.id }
-            AiImportHistoryStore.cleanupUnreferencedContextFiles(appContext, retained)
         }
         guarded("schedule snapshot 清理失败") {
             val ids = database.scheduleProfileDao().getProfiles().map { it.id }

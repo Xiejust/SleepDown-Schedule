@@ -9,7 +9,6 @@ import androidx.compose.ui.test.onNodeWithText
 import com.itos.coui.effect.CouiFloatingMaterial
 import com.itos.coui.effect.couiControlMaterialEffect
 import com.itos.coui.effect.couiControlMaterialEffectOrNull
-import com.xiaomanjun.sleepdownschedule.feature.onboarding.VersionWelcomeScreen
 import org.junit.Assert.assertNotNull
 import org.junit.Assert.assertNull
 import org.junit.Rule
@@ -79,17 +78,4 @@ class CouiControlMaterialRenderEffectTest {
         assertNotNull(couiControlMaterialEffectOrNull(darkened))
     }
 
-    @Test
-    fun versionWelcomeActionButtonRendersPastRevealWithoutCrashing() {
-        compose.mainClock.autoAdvance = false
-        compose.setContent {
-            VersionWelcomeScreen(
-                opening = false,
-                onLightBackground = {},
-                onContinue = {},
-            )
-        }
-        compose.mainClock.advanceTimeBy(4_000)
-        compose.onNodeWithText("继续").assertIsDisplayed()
-    }
 }

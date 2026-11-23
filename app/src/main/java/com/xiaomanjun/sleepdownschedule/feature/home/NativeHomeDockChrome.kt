@@ -12,7 +12,6 @@ import com.xiaomanjun.sleepdownschedule.core.performance.DockEntranceContainer
 import com.xiaomanjun.sleepdownschedule.core.performance.StartupPhase
 import com.xiaomanjun.sleepdownschedule.core.ui.material.DockImportSource
 import com.xiaomanjun.sleepdownschedule.core.ui.material.LocalVisualEffects
-import com.xiaomanjun.sleepdownschedule.feature.agent.homeCountdownShockwave
 
 /**
  * Dock 路由：Android 14+ 的凝光模式优先使用 COUI-Kit 胶囊；创建失败或旧系统回到
@@ -37,7 +36,7 @@ internal fun NativeHomeDockChrome(
         Log.i("SleepDownCOUI", "Dock commit: selected=$selectedIndex, dark=$dark, hidden=$buttonHidden, " +
             "coui=${couiBackdrop != null}")
     }
-    DockEntranceContainer(phase, modifier.homeCountdownShockwave(0.85f)) {
+    DockEntranceContainer(phase, modifier) {
         val effects = LocalVisualEffects.current
         if (effects.usesCouiDock && couiBackdrop != null &&
             CouiHomeDock(

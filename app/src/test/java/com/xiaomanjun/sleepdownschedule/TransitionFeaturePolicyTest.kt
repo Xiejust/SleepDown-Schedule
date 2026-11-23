@@ -21,7 +21,6 @@ class TransitionFeaturePolicyTest {
             TransitionRouteId.HomeToCourseManagement,
             TransitionRouteId.QuickSheetToSettingsDetail,
             TransitionRouteId.SpecialCourseToEditor,
-            TransitionRouteId.FeedbackToEditor,
             TransitionRouteId.WelcomeToHome,
         )
         for (id in TransitionRouteId.entries) {

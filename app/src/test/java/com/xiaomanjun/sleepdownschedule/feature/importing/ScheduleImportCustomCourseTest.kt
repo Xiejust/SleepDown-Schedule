@@ -43,23 +43,6 @@ class ScheduleImportCustomCourseTest {
         assertEquals(raw.originalPeriodTimes,imported.courses.single().customPeriodTimes)
     }
     @Test
-    fun aiToolExposesPerCourseExactTimeFields() {
-        val courseSchema = scheduleImportChatTool()["function"]!!.jsonObject["parameters"]!!
-            .jsonObject["properties"]!!.jsonObject["courses"]!!.jsonObject["items"]!!.jsonObject
-        val required = courseSchema["required"]!!.jsonArray.map { it.jsonPrimitive.content }
-        val properties = courseSchema["properties"]!!.jsonObject
-
-        assertTrue("customStartTime" in required)
-        assertTrue("customEndTime" in required)
-        assertTrue("customStartTime" in properties)
-        assertTrue("customEndTime" in properties)
-        assertFalse("customPeriodTimes" in required)
-        assertFalse("customPeriodTimes" in properties)
-        assertTrue("position" in properties && "day" in properties && "isCustomTime" in properties && "credit" in properties)
-        assertFalse("location" in properties || "weekday" in properties || "weekParity" in properties)
-    }
-
-    @Test
     fun sameSectionCoursesKeepDistinctClockTimesFromImportedJson() {
         val payload = """{
           "schemaVersion":1,

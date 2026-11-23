@@ -69,7 +69,7 @@ internal fun HomeBackgroundBlurLayer(
     blurProgress: () -> Float,
     useFrozenHomeScene: () -> Boolean,
     retainedScene: GraphicsLayer,
-    prepareScene: ContentDrawScope.(frozen: Boolean) -> Boolean,
+    prepareScene: ContentDrawScope.(frozen: Boolean, idle: Boolean) -> Boolean,
     modifier: Modifier = Modifier,
     replayUnblurredScene: Boolean = false,
     sceneVisible: () -> Boolean = { true },
@@ -100,10 +100,10 @@ internal fun HomeBackgroundBlurLayer(
             blurred.renderEffect = effects[step]
         }.drawWithContent {
             if (!sceneVisible()) {
-                prepareScene(false)
+                prepareScene(false, false)
                 return@drawWithContent
             }
-            val scene = if (prepareScene(useFrozenHomeScene())) retainedScene else {
+            val scene = if (prepareScene(useFrozenHomeScene(), false)) retainedScene else {
                 liveScene.record { this@drawWithContent.drawContent() }
                 liveScene
             }
@@ -132,7 +132,7 @@ internal fun HomeBackgroundBlurLayer(
         }
     } else Modifier.drawWithContent {
         val visible = sceneVisible()
-        val retained = prepareScene(visible && replayUnblurredScene && useFrozenHomeScene())
+        val retained = prepareScene(visible && replayUnblurredScene && useFrozenHomeScene(), true)
         if (visible) {
             if (retained) drawLayer(retainedScene) else drawContent()
         }

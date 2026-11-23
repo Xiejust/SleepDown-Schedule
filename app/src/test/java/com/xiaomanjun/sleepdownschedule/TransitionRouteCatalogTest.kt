@@ -11,15 +11,6 @@ import org.junit.Test
 
 class TransitionRouteCatalogTest {
     @Test
-    fun feedbackListAndDetailUseThePlatformActivityTransition() {
-        val routes = listOf(TransitionRouteId.SettingsToFeedback, TransitionRouteId.FeedbackToDetail)
-        routes.map(TransitionRouteCatalog::get).forEach { route ->
-            assertEquals(LegacyTransitionProfile.PlatformDefault, route.legacyProfile)
-            assertEquals(TransitionNativePolicy.Never, route.nativePolicy)
-        }
-    }
-
-    @Test
     fun colorOsCourseManagementUsesTheSamePageTransitionAsSettingsDetails() {
         val course = TransitionRouteCatalog.get(TransitionRouteId.HomeMenuToCourseManagement)
         val settings = TransitionRouteCatalog.get(TransitionRouteId.SettingsToSettingsDetail)
@@ -53,7 +44,6 @@ class TransitionRouteCatalogTest {
                 TransitionRouteId.HomeToCourseManagement,
                 TransitionRouteId.QuickSheetToSettingsDetail,
                 TransitionRouteId.SpecialCourseToEditor,
-                TransitionRouteId.FeedbackToEditor,
                 TransitionRouteId.WelcomeToHome,
             ),
             nativeCandidates.map { it.id }.toSet()
@@ -79,7 +69,6 @@ class TransitionRouteCatalogTest {
             TransitionRouteId.HomeToCourseManagement,
             TransitionRouteId.QuickSheetToSettingsDetail,
             TransitionRouteId.SpecialCourseToEditor,
-            TransitionRouteId.FeedbackToEditor,
             TransitionRouteId.WelcomeToHome,
         )
         assertEquals(
@@ -122,11 +111,6 @@ class TransitionRouteCatalogTest {
         val special = TransitionRouteCatalog.get(TransitionRouteId.SpecialCourseToEditor)
         assertEquals("com.xiaomanjun.sleepdownschedule.feature.settings.NativeSpecialCourseEditorActivity",
             special.nativeDestinationClassName)
-        val feedback = TransitionRouteCatalog.get(TransitionRouteId.FeedbackToEditor)
-        assertEquals("com.xiaomanjun.sleepdownschedule.feature.feedback.NativeFeedbackEditorActivity",
-            feedback.nativeDestinationClassName)
-        assertEquals(special.legacyProfile, feedback.legacyProfile)
-        assertTrue(feedback.requiresLiveSourceView)
         val welcome = TransitionRouteCatalog.get(TransitionRouteId.WelcomeToHome)
         assertTrue(welcome.oneWay && welcome.requiresLiveSourceView && !welcome.requiresReturnAnchor)
         assertEquals("com.xiaomanjun.sleepdownschedule.MainActivity", welcome.nativeDestinationClassName)

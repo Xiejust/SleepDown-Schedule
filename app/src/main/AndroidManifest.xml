@@ -87,10 +87,6 @@
                 <data android:mimeType="application/ics" />
             </intent-filter>
         </activity>
-        <activity
-            android:name=".app.entrypoints.VersionWelcomeActivity"
-            android:exported="false"
-            android:theme="@style/AppTheme.Welcome" />
         <activity-alias
             android:name=".LauncherFollow"
             android:enabled="true"
@@ -222,23 +218,6 @@
             android:windowSoftInputMode="adjustResize"
             android:parentActivityName=".SettingsDetailActivity" />
         <activity
-            android:name=".feature.feedback.FeedbackDetailActivity"
-            android:exported="false"
-            android:theme="@style/AppTheme"
-            android:parentActivityName=".SettingsDetailActivity" />
-        <activity
-            android:name=".feature.feedback.FeedbackEditorActivity"
-            android:exported="false"
-            android:theme="@style/AppTheme.TranslucentMorph"
-            android:windowSoftInputMode="adjustResize"
-            android:parentActivityName=".SettingsDetailActivity" />
-        <activity
-            android:name=".feature.feedback.NativeFeedbackEditorActivity"
-            android:exported="false"
-            android:theme="@style/AppTheme.NativeDetail"
-            android:windowSoftInputMode="adjustResize"
-            android:parentActivityName=".SettingsDetailActivity" />
-        <activity
             android:name=".ScheduleManagerActivity"
             android:exported="false"
             android:theme="@style/AppTheme"
@@ -290,47 +269,6 @@
             android:name=".OplusEduSchoolSelectActivity"
             android:targetActivity=".EduSchoolSelectActivity"
             android:exported="false" />
-        <activity
-            android:name=".EduImportActivity"
-            android:exported="false"
-            android:theme="@style/AppTheme"
-            android:windowSoftInputMode="adjustResize"
-            android:parentActivityName=".EduSchoolSelectActivity" />
-        <activity
-            android:name=".feature.schedule.autorefresh.SwuUnifiedAuthActivity"
-            android:exported="false"
-            android:theme="@style/AppTheme"
-            android:windowSoftInputMode="adjustResize"
-            android:parentActivityName=".SettingsDetailActivity" />
-        <activity
-            android:name=".AiEduImportProgressActivity"
-            android:exported="false"
-            android:theme="@style/AppTheme"
-            android:parentActivityName=".EduImportActivity" />
-        <activity
-            android:name=".AiImportHistoryActivity"
-            android:exported="false"
-            android:theme="@style/AppTheme.TranslucentMorph"
-            android:parentActivityName=".AiEduImportProgressActivity" />
-        <activity-alias
-            android:name=".OplusAiImportHistoryActivity"
-            android:targetActivity=".AiImportHistoryActivity"
-            android:exported="false" />
-        <activity
-            android:name=".NativeAiImportHistoryActivity"
-            android:exported="false"
-            android:theme="@style/AppTheme.NativeDetail"
-            android:parentActivityName=".AiEduImportProgressActivity" />
-        <activity
-            android:name=".AiImportHistoryDetailActivity"
-            android:exported="false"
-            android:theme="@style/AppTheme.TranslucentMorph"
-            android:parentActivityName=".AiImportHistoryActivity" />
-        <activity
-            android:name=".NativeAiImportHistoryDetailActivity"
-            android:exported="false"
-            android:theme="@style/AppTheme.NativeDetail"
-            android:parentActivityName=".AiImportHistoryActivity" />
         <provider
             android:name="androidx.core.content.FileProvider"
             android:authorities="${applicationId}.fileprovider"
@@ -357,19 +295,7 @@
                 android:name="android.app.PROPERTY_SPECIAL_USE_FGS_SUBTYPE"
                 android:value="Course reminder live update while a class reminder is active" />
         </service>
-        <service
-            android:name=".DayAgentForegroundService"
-            android:exported="false"
-            android:foregroundServiceType="dataSync" />
-        <service
-            android:name=".AiImportForegroundService"
-            android:exported="false"
-            android:foregroundServiceType="dataSync" />
         <receiver android:name=".feature.widget.WidgetPinnedReceiver" android:exported="false" />
-        <service
-            android:name=".feature.importing.chatgpt.ChatGptLoginService"
-            android:exported="false"
-            android:foregroundServiceType="shortService" />
         <receiver
             android:name=".TodayCoursesWidgetProvider"
             android:label="@string/widget_today_courses_name"

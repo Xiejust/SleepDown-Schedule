@@ -241,31 +241,6 @@ object BackupImportPlanBuilder {
         archive.preferences.appIcon?.let {
             strictEnum<AppIconMode>(it.mode, "app icon mode")
         }
-        archive.preferences.aiImport?.let { ai ->
-            ai.providers.forEach { provider ->
-                strictEnum<AiProviderType>(provider.providerType, "AI providerType")
-                val authType = strictEnum<AiAuthType>(provider.authType, "AI authType")
-                AiProviderPresets.validateRestoredProviderIdentity(provider.id, authType)
-                strictEnum<AiEndpointStyle>(provider.endpointStyle, "AI endpointStyle")
-                strictEnum<StructuredOutputMode>(provider.structuredOutputMode, "AI structuredOutputMode")
-                strictEnum<AiInputMode>(provider.inputMode, "AI inputMode")
-                strictEnum<AiReasoningEffort>(provider.reasoningEffort, "AI reasoningEffort")
-            }
-            require(ai.providers.any { it.id == ai.selectedProviderId } ||
-                (ai.providers.isEmpty() && ai.selectedProviderId == AiProviderPresets.none.id)
-            ) { "AI selectedProviderId 不在 provider 列表中" }
-        }
-        archive.preferences.aiImportHistory.forEach { history ->
-            history.contextAssetId?.let {
-                assetReference(it, BackupAssetCategory.OTHER, BackupAssetPurpose.AI_IMPORT_HISTORY_CONTEXT, history.id)
-            }
-        }
-        val historyIds = archive.preferences.aiImportHistory.mapTo(hashSetOf()) { it.id }
-        archive.assets.filter { it.purpose == BackupAssetPurpose.AI_IMPORT_SCREENSHOT }.forEach { image ->
-            require(image.ownerId in historyIds) { "AI history screenshot 没有所属记录" }
-            assetReference(image.assetId, BackupAssetCategory.SCHEDULES, BackupAssetPurpose.AI_IMPORT_SCREENSHOT,
-                checkNotNull(image.ownerId))
-        }
     }
 
     private inline fun <reified T : Enum<T>> strictEnum(value: String, label: String): T =

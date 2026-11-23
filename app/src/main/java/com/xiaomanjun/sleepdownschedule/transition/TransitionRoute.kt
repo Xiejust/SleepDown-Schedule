@@ -16,17 +16,12 @@ enum class TransitionRouteId(val wireName: String) {
     HomeToSettingsDetail("home_to_settings_detail"),
     QuickSheetToSettingsDetail("quick_sheet_to_settings_detail"),
     SpecialCourseToEditor("special_course_to_editor"),
-    SettingsToFeedback("settings_to_feedback"),
-    FeedbackToDetail("feedback_to_detail"),
-    FeedbackToEditor("feedback_to_editor"),
     WelcomeToHome("welcome_to_home"),
     SettingsToSettingsDetail("settings_to_settings_detail"),
     SettingsToScheduleAdjustments("settings_to_schedule_adjustments"),
     ScheduleManagerToSettingsDetail("schedule_manager_to_settings_detail"),
     HomeToEduImport("home_to_edu_import"),
     HomeDockToImport("home_dock_to_import"),
-    SchoolSelectToEduImport("school_select_to_edu_import"),
-    ImportToAiProgress("import_to_ai_progress"),
     ReturnToHome("return_to_home");
 
     companion object {
@@ -206,30 +201,6 @@ object TransitionRouteCatalog {
             requiresLiveSourceView = true
         ),
         TransitionRouteSpec(
-            TransitionRouteId.SettingsToFeedback,
-            "$PackageName.SettingsDetailActivity",
-            LegacyTransitionProfile.PlatformDefault,
-        ),
-        TransitionRouteSpec(
-            TransitionRouteId.FeedbackToDetail,
-            "$PackageName.feature.feedback.FeedbackDetailActivity",
-            LegacyTransitionProfile.PlatformDefault,
-        ),
-        TransitionRouteSpec(
-            id = TransitionRouteId.FeedbackToEditor,
-            destinationClassName = "$PackageName.feature.feedback.FeedbackEditorActivity",
-            legacyProfile = LegacyTransitionProfile.Anchored(
-                profileId = AnchoredLegacyProfileId.DetailSettings,
-                sourceCornerRadiusDp = 28f
-            ),
-            nativePolicy = TransitionNativePolicy.SharedViewKitAllowlisted,
-            destinationWindowPolicy = TransitionDestinationWindowPolicy.OpaqueNativeCandidate,
-            nativeDestinationClassName = "$PackageName.feature.feedback.NativeFeedbackEditorActivity",
-            requiresOpeningAnchor = true,
-            requiresReturnAnchor = true,
-            requiresLiveSourceView = true
-        ),
-        TransitionRouteSpec(
             id = TransitionRouteId.WelcomeToHome,
             destinationClassName = "$PackageName.MainActivity",
             legacyProfile = LegacyTransitionProfile.Anchored(AnchoredLegacyProfileId.Welcome, 28f),
@@ -287,11 +258,6 @@ object TransitionRouteCatalog {
             requiresLiveSourceView = true
         ),
         TransitionRouteSpec(
-            TransitionRouteId.SchoolSelectToEduImport,
-            "$PackageName.EduImportActivity",
-            LegacyTransitionProfile.PlatformDefault
-        ),
-        TransitionRouteSpec(
             TransitionRouteId.TabletHomeToCourseManagement,
             "$PackageName.CourseManagementActivity",
             LegacyTransitionProfile.PlatformDefault
@@ -304,11 +270,6 @@ object TransitionRouteCatalog {
         TransitionRouteSpec(
             TransitionRouteId.HomeToUnifiedImport,
             "$PackageName.EduSchoolSelectActivity",
-            LegacyTransitionProfile.PlatformDefault
-        ),
-        TransitionRouteSpec(
-            TransitionRouteId.ImportToAiProgress,
-            "$PackageName.AiEduImportProgressActivity",
             LegacyTransitionProfile.PlatformDefault
         ),
         TransitionRouteSpec(

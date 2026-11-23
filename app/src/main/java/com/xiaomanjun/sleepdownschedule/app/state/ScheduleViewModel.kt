@@ -9,13 +9,8 @@ import androidx.lifecycle.ViewModelProvider
 import androidx.lifecycle.viewModelScope
 import com.xiaomanjun.sleepdownschedule.*
 import com.xiaomanjun.sleepdownschedule.core.wallpaper.*
-import com.xiaomanjun.sleepdownschedule.domain.agent.AgentPlan
-import com.xiaomanjun.sleepdownschedule.domain.agent.AgentPlanExecutionResult
-import com.xiaomanjun.sleepdownschedule.feature.agent.AgentSettingPlanExecutor
-import com.xiaomanjun.sleepdownschedule.feature.importing.AiImportHistoryStore
 import com.xiaomanjun.sleepdownschedule.feature.reminder.NotificationScheduler
 import com.xiaomanjun.sleepdownschedule.feature.schedule.*
-import com.xiaomanjun.sleepdownschedule.model.agent.AgentValidatedAction
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.async
@@ -68,13 +63,6 @@ class ScheduleViewModel(
     private val scheduleActions = ScheduleActions(
         app, repository, viewModelScope, refreshCoordinator::request,
         onMessage = { mutableSnackbar.value = it }
-    )
-
-    private val agentSettingPlans = AgentSettingPlanExecutor(
-        app = app,
-        repository = repository,
-        scope = viewModelScope,
-        requestRefresh = refreshCoordinator::request
     )
 
     init {
@@ -222,43 +210,17 @@ class ScheduleViewModel(
         }
     }
 
-    fun executeAgentPlan(
-        actions: List<AgentValidatedAction>,
-        onResult: (AgentPlanExecutionResult) -> Unit = {}
-    ) = viewModelScope.launch {
-        val result = repository.executeAgentPlan(AgentPlan(actions))
-        if (result.success) refreshCoordinator.request()
-        mutableSnackbar.value = result.message
-        onResult(result)
-    }
-
-    fun executeAgentSettingPlan(
-        actions: List<AgentValidatedAction>,
-        onResult: (AgentPlanExecutionResult) -> Unit = {}
-    ) = agentSettingPlans.execute(actions, onResult)
-
     fun importDraft(
         draft: ImportDraft,
         createNewSchedule: Boolean = false,
-        historySource: String = "常规导入",
+        @Suppress("UNUSED_PARAMETER") historySource: String = "常规导入",
         onFailure: ((Throwable) -> Unit)? = null,
         onDone: (Int) -> Unit
     ) = viewModelScope.launch {
         try {
             val scheduleId = repository.importDraft(draft, createNewSchedule)
-            val historySaved = draft.source != ImportDraftSource.STANDARD || withContext(Dispatchers.IO) {
-                runCatching {
-                    AiImportHistoryStore.record(app, draft, progress = null, sourceSummary = historySource)
-                }.onFailure { error ->
-                    Log.w("ScheduleViewModel", "Import history save failed: ${error.javaClass.simpleName}")
-                }.isSuccess
-            }
             refreshCoordinator.request()
-            mutableSnackbar.value = when {
-                !historySaved -> "课表已导入，历史记录保存失败"
-                createNewSchedule -> "已导入到新课表"
-                else -> "课程表已导入"
-            }
+            mutableSnackbar.value = if (createNewSchedule) "已导入到新课表" else "课程表已导入"
             onDone(scheduleId)
         } catch (cancelled: CancellationException) {
             throw cancelled
@@ -348,87 +310,6 @@ class ScheduleViewModel(
     fun renameSchedule(scheduleId: Int, name: String) = scheduleActions.renameSchedule(scheduleId, name)
 
     fun deleteSchedule(scheduleId: Int) = scheduleActions.deleteSchedule(scheduleId)
-
-    /**
-     * Agent-facing schedule actions. These run outside the course transaction because they change
-     * the global active context, so the result reports the action itself rather than a course diff.
-     * Creating a schedule deliberately does not switch to it; an unrequested context switch would
-     * make every later fact read belong to a different schedule than the user was looking at.
-     */
-    fun openAgentPage(onResult: (AgentPlanExecutionResult) -> Unit, open: (AppState) -> Unit) = viewModelScope.launch {
-        val error = runCatching { open(repository.snapshot()) }.exceptionOrNull()
-        onResult(AgentPlanExecutionResult(error == null, null, error == null,
-            if (error == null) "页面已打开" else "打开页面失败：${error.message ?: "请重试"}"))
-    }
-
-    fun createScheduleFromAgent(name: String, onResult: (AgentPlanExecutionResult) -> Unit) =
-        viewModelScope.launch {
-            val error = runCatching {
-                val createdId = repository.createSchedule(name)
-                check(repository.snapshot().schedules.any { it.id == createdId && it.name == name.trim().take(30) }) {
-                    "创建后的课表未通过回读校验"
-                }
-                refreshCoordinator.request()
-            }.exceptionOrNull()
-            onResult(
-                AgentPlanExecutionResult(
-                    success = error == null,
-                    preview = null,
-                    verified = error == null,
-                    message = if (error == null) {
-                        "已创建课表「$name」，当前仍在使用原课表；需要切换请再确认"
-                    } else {
-                        "创建课表失败：${error.message ?: "未知错误"}"
-                    }
-                )
-            )
-        }
-
-    fun activateScheduleFromAgent(scheduleId: Int, onResult: (AgentPlanExecutionResult) -> Unit) =
-        viewModelScope.launch {
-            val error = runCatching {
-                repository.activateSchedule(scheduleId)
-                check(repository.snapshot().config.id == scheduleId) { "切换后的课表未通过回读校验" }
-                refreshCoordinator.request()
-            }.exceptionOrNull()
-            onResult(
-                AgentPlanExecutionResult(
-                    success = error == null,
-                    preview = null,
-                    verified = error == null,
-                    message = if (error == null) "已切换到目标课表" else "切换课表失败：${error.message ?: "目标课表不存在"}"
-                )
-            )
-        }
-
-    fun deleteScheduleFromAgent(scheduleId: Int, onResult: (AgentPlanExecutionResult) -> Unit) =
-        viewModelScope.launch {
-            if (repository.snapshot().schedules.size <= 1) {
-                onResult(
-                    AgentPlanExecutionResult(
-                        success = false,
-                        preview = null,
-                        verified = false,
-                        message = "当前仅剩一个课表，无法删除；已为你保留使用中的课表"
-                    )
-                )
-                return@launch
-            }
-            val error = runCatching {
-                repository.deleteSchedule(scheduleId)
-                check(repository.snapshot().schedules.none { it.id == scheduleId }) { "删除后的课表未通过回读校验" }
-                cleanupScheduleWallpaperFiles()
-                refreshCoordinator.request()
-            }.exceptionOrNull()
-            onResult(
-                AgentPlanExecutionResult(
-                    success = error == null,
-                    preview = null,
-                    verified = error == null,
-                    message = if (error == null) "已删除课表" else "删除课表失败：${error.message ?: "未知错误"}"
-                )
-            )
-        }
 
     fun saveScheduleAdjustments(scheduleId: Int, original: String, updated: String,
         onSuccess: (() -> Unit)? = null, onFailure: (() -> Unit)? = null) =

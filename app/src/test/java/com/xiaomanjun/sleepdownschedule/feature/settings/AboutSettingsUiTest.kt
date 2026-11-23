@@ -51,9 +51,8 @@ class AboutSettingsUiTest {
     @Test fun aboutShowsGitHubRowsAndSoftwareUpdateShowsBundledNotesAndImmediateMenu() {
         val config = defaultConfig().copy(darkMode = true, followSystemDarkMode = false)
         var notesOpens = 0
-        var welcomeReplays = 0
         var pickedPage: SettingsPage? = null
-        RuntimeEnvironment.getApplication().applicationInfo.nonLocalizedLabel = "SleepDown课程表"
+        RuntimeEnvironment.getApplication().applicationInfo.nonLocalizedLabel = "AHMU课程表"
         compose.setContent {
             MaterialTheme(colorScheme = darkColorScheme()) {
                 CompositionLocalProvider(LocalVisualEffects provides VisualEffectsState(
@@ -73,14 +72,14 @@ class AboutSettingsUiTest {
                             { SoftwareUpdateToolbarButton(CouiIcons.Back, "返回", back) }
                         } else null,
                         topBarActions = { source ->
-                            if (page == SettingsPage.SoftwareUpdate) SoftwareUpdateMenu(source, onReplayWelcome = { welcomeReplays++ }) {
+                            if (page == SettingsPage.SoftwareUpdate) SoftwareUpdateMenu(source) {
                                 pickedPage = it
                                 page = it
                             }
                         },
                     ) { _, source ->
                         when (page) {
-                            SettingsPage.About -> ColorOsAboutSettingsScreen(AppState(config = config), source, {}, {},
+                            SettingsPage.About -> ColorOsAboutSettingsScreen(AppState(config = config), source, {},
                                 onSoftwareUpdate = { page = SettingsPage.SoftwareUpdate })
                             SettingsPage.Changelog -> ChangelogSettingsScreen(AppState(config = config), source)
                             SettingsPage.AutoUpdate -> AutoUpdateSettingsScreen(config, source, onUpdateConfig = {})
@@ -92,7 +91,7 @@ class AboutSettingsUiTest {
                 }
             }
         }
-        compose.onNodeWithText("SleepDown课程表").assertIsDisplayed()
+        compose.onNodeWithText("AHMU课程表").assertIsDisplayed()
         val update = compose.onNode(hasText("检查更新") or hasText("正在检查更新…") or
             hasText("发现新版本") or hasText("已是最新版本")).assertIsDisplayed()
         val density = RuntimeEnvironment.getApplication().resources.displayMetrics.density
@@ -101,7 +100,7 @@ class AboutSettingsUiTest {
         val repository = compose.onNodeWithText("项目仓库").assertIsDisplayed().fetchSemanticsNode().boundsInRoot
         assertEquals(profile.left, repository.left, 1f)
         assertTrue(profile.bottom < repository.top)
-        compose.onNodeWithText("xiaomanjun233").assertIsDisplayed()
+        compose.onNodeWithText("Xiejust").assertIsDisplayed()
         compose.onNodeWithText("SleepDown-Schedule").assertIsDisplayed()
         compose.onNodeWithText("更新日志").assertDoesNotExist()
         compose.onNodeWithText("源代码").assertDoesNotExist()
@@ -131,27 +130,10 @@ class AboutSettingsUiTest {
         compose.onNodeWithText("历史日志").assertDoesNotExist()
         val more = compose.onNodeWithContentDescription("更多选项")
         more.performClick()
-        val highlightsMenuItem = compose.onNodeWithText("查看亮点功能").assertIsDisplayed()
         val historyMenuItem = compose.onNodeWithText("历史日志").assertIsDisplayed()
-        assertTrue(highlightsMenuItem.fetchSemanticsNode().boundsInRoot.top < historyMenuItem.fetchSemanticsNode().boundsInRoot.top)
         assertTrue(historyMenuItem.fetchSemanticsNode().boundsInRoot.width < 196f * density)
-        highlightsMenuItem.performClick()
-        compose.runOnIdle { assertEquals(1, welcomeReplays) }
-        highlightsMenuItem.assertDoesNotExist()
-        more.performClick()
-        val autoUpdateItem = compose.onNodeWithText("自动更新设置").assertIsDisplayed()
-        compose.mainClock.autoAdvance = false
-        try {
-            autoUpdateItem.performClick()
-            compose.runOnIdle { assertEquals(SettingsPage.AutoUpdate, pickedPage) }
-        } finally {
-            compose.mainClock.autoAdvance = true
-        }
-        compose.onNodeWithText("自动检查更新").assertIsDisplayed()
-        compose.onNodeWithText("接收 Beta 版更新").assertIsDisplayed()
-        compose.onNodeWithContentDescription("返回").performClick()
-        more.performClick()
-        compose.onNodeWithText("历史日志").performClick()
+        compose.onNodeWithText("自动更新设置").assertDoesNotExist()
+        historyMenuItem.performClick()
         compose.onNodeWithText("重构课表刷新功能", substring = true).assertExists()
         compose.onNodeWithText("2.0.3").performClick()
         compose.onNodeWithText("2.0.2").performClick()

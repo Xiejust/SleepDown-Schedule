@@ -85,7 +85,6 @@ import com.xiaomanjun.sleepdownschedule.core.ui.chrome.LocalSharedTransitionScop
 import com.xiaomanjun.sleepdownschedule.core.ui.text.LocalCourseTextMotionFrozen
 import com.xiaomanjun.sleepdownschedule.courseAllowsWeekPeriodDrag
 import com.xiaomanjun.sleepdownschedule.domain.course.nearestAvailableCourseMove
-import com.xiaomanjun.sleepdownschedule.feature.agent.homeCountdownShockwave
 import com.xiaomanjun.sleepdownschedule.feature.home.CourseAdjustmentBadge
 import com.xiaomanjun.sleepdownschedule.feature.home.LocalAdjustedCourseEditor
 import com.xiaomanjun.sleepdownschedule.core.ui.text.LocalHomeBackgroundFrozen
@@ -602,7 +601,6 @@ fun WeekCourseBlock(
                     }
                 }
                 .then(visibilityModifier)
-                .homeCountdownShockwave()
                 .zIndex(if (liftedVisualActive) 3f else 0f)
         ) {
             conflictUnderlyingCourse

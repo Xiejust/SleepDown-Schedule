@@ -121,7 +121,7 @@ fun AboutSettingsScreen(state: AppState, backdrop: Backdrop?) {
                             color = MaterialTheme.colorScheme.onSurfaceVariant
                         )
                         Text(
-                            text = "版本 $versionName · 小漫君独立设计与开发",
+                            text = "版本 $versionName · Xiejust 维护",
                             style = MaterialTheme.typography.bodySmall,
                             color = MaterialTheme.colorScheme.onSurfaceVariant
                         )
@@ -177,7 +177,7 @@ fun AboutSettingsScreen(state: AppState, backdrop: Backdrop?) {
         item(key = "about-project") {
             GlassPreferenceSection("项目信息") {
                 SettingsGroup(backdrop = backdrop, config = state.config, modifier = Modifier.fillMaxWidth()) {
-                    SettingsValueRow("开发与维护", "小漫君 / xiaomanjun233")
+                    SettingsValueRow("开发与维护", "Xiejust")
                     SettingsDivider()
                     SettingsValueRow("当前版本", versionName)
                     SettingsDivider()
@@ -242,7 +242,7 @@ fun AboutSettingsScreen(state: AppState, backdrop: Backdrop?) {
 }
 
 internal const val SleepDownWebsiteUrl = "https://xiaomanjun233.github.io/SleepDown-Schedule/"
-internal const val SleepDownSourceUrl = "https://github.com/xiaomanjun233/SleepDown-Schedule"
+internal const val SleepDownSourceUrl = "https://github.com/Xiejust/SleepDown-Schedule"
 internal const val SleepDownReleasesUrl = "$SleepDownSourceUrl/releases"
 internal const val SleepDownIssuesUrl = "$SleepDownSourceUrl/issues"
 private const val SleepDownLicenseUrl = "$SleepDownSourceUrl/blob/main/LICENSE.md"
@@ -464,7 +464,7 @@ internal fun AboutHero(
         )
         Spacer(Modifier.height(8.dp))
         Text(
-            text = "版本 $versionName  ·  小漫君独立设计与开发",
+            text = "版本 $versionName  ·  Xiejust 维护",
             style = MaterialTheme.typography.bodyMedium,
             textAlign = TextAlign.Center,
             color = MaterialTheme.colorScheme.onBackground.copy(alpha = 0.56f)

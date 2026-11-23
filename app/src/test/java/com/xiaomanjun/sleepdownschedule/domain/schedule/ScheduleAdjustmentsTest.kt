@@ -3,7 +3,6 @@ package com.xiaomanjun.sleepdownschedule.domain.schedule
 import com.xiaomanjun.sleepdownschedule.model.*
 import com.xiaomanjun.sleepdownschedule.feature.home.day.weekCourseBuckets
 import com.xiaomanjun.sleepdownschedule.feature.home.day.visibleWeekdaysForBuckets
-import com.xiaomanjun.sleepdownschedule.feature.agent.buildDayAgentFacts
 import org.junit.Assert.*
 import org.junit.Test
 import java.time.LocalDate
@@ -96,37 +95,6 @@ class ScheduleAdjustmentsTest {
         assertTrue(buckets.visibleCourses.isEmpty())
         assertEquals(setOf(6), buckets.cancelledWeekdays)
         assertEquals((1..5).toList(), visibleWeekdaysForBuckets(buckets, hideEmptyWeekends = true))
-    }
-
-    @Test fun agentUsesSameMakeupCourseOnActualDate() {
-        val facts = buildDayAgentFacts(state.courses, state.periods, config, target, null)
-        assertEquals(listOf(regular), facts.today.map { it.course })
-        assertEquals(target, facts.today.single().date)
-        assertEquals(3, facts.currentWeek)
-        assertEquals(2, facts.currentTeachingWeek)
-        assertEquals(source, facts.currentTeachingDate)
-        assertEquals(source, facts.today.single().originalDate)
-    }
-
-    @Test fun editingTodayMakeupTargetsOriginalWeekWithoutChangingOtherCourseWeek() {
-        val other = regular.copy(id = 43, weekday = 3, weeks = listOf(3), weekParity = WeekParity.ALL)
-        val facts = buildDayAgentFacts(listOf(regular, other), state.periods, config, target, null)
-        val actions = com.xiaomanjun.sleepdownschedule.feature.agent.parseAgentActions("""
-            <agent_actions>[
-              {"type":"UPDATE_COURSE","courseId":42,"course":{"name":"修改补课"}},
-              {"type":"UPDATE_COURSE","courseId":43,"course":{"name":"修改本周"}}
-            ]</agent_actions>
-        """.trimIndent(), facts).actions
-        assertEquals(listOf(2, 3), actions.map { it.targetWeek })
-    }
-
-    @Test fun addingCourseToMakeupSourceUsesSourceWeek() {
-        val facts = buildDayAgentFacts(state.courses, state.periods, config, target, null)
-        val actions = com.xiaomanjun.sleepdownschedule.feature.agent.parseAgentActions("""
-            <agent_actions>[{"type":"ADD_COURSE","course":{"name":"补课新增","weekday":1,"periods":[1]}}]</agent_actions>
-        """.trimIndent(), facts).actions
-        assertEquals(2, actions.single().targetWeek)
-        assertEquals(listOf(2), actions.single().edited?.weeks)
     }
 
     @Test fun manualWeekSourcesResolveAcrossWeekBoundary() {

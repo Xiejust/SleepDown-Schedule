@@ -30,7 +30,7 @@ class WakeUpImportSessionTest {
         val displayed = projectCourseArrangements(draft.courses, draft.config, draft.periods).single()
         assertEquals(listOf(3, 4), displayed.periods)
         assertEquals("10:00 - 11:40", courseTimeLabel(displayed, draft.periods))
-        val restored = ScheduleImportParser.parseStoredDraft(draftToPayload(draft).toString(), draft.config).getOrThrow()
+        val restored = ScheduleImportParser.parseStoredDraft(CanonicalScheduleJson.encode(draft), draft.config).getOrThrow()
         assertEquals(draft.courses, restored.courses)
     }
 

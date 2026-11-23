@@ -65,7 +65,7 @@ object BackupPreviewReportBuilder {
             warnings = plan.warnings,
             requiresExplicitReplaceConfirmation = plan.requiresExplicitReplaceConfirmation,
             nonMigratableItems = buildList {
-                add("AI 服务的 API Key 和教务登录状态需要重新填写或登录")
+                add("教务登录状态需要重新登录")
                 add("通知、闹钟和其他系统权限需要在新设备重新允许")
                 if (archive.data.widgetAppearances.any { it.scope == "instance" }) {
                     add("桌面小组件需要在新设备重新添加")

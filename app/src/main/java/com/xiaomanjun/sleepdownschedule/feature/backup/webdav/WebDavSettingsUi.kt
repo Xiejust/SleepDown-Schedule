@@ -243,7 +243,7 @@ internal fun WebDavSettingsScreen(state: AppState, backdrop: Backdrop?, onOpenPr
                                     message = null; editingConnection = true
                                 })
                         }
-                        GlassPreferenceCategory("备份全部课表、设置、壁纸、助手记录及 AI 导入历史，与本地 .sleepdown 备份范围一致；API Key、WebDAV 凭据和登录状态不会上传；备份文件未加密；当前开启超级性能模式时，恢复不会自动退出该模式")
+                        GlassPreferenceCategory("备份全部课表、设置、壁纸及历史导入记录，与本地 .sleepdown 备份范围一致；WebDAV 凭据和登录状态不会上传；备份文件未加密；当前开启超级性能模式时，恢复不会自动退出该模式")
                         if (savedConnection?.address?.startsWith("http://", true) == true)
                             GlassPreferenceCategory("当前为 HTTP，传输未加密，建议使用 HTTPS")
                     }

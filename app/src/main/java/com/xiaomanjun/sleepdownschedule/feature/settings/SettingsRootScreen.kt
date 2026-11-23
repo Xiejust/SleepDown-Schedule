@@ -13,7 +13,6 @@ import androidx.compose.foundation.layout.size
 import com.xiaomanjun.sleepdownschedule.core.ui.interaction.SleepDownLazyColumn
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.rounded.Favorite
-import androidx.compose.material.icons.rounded.Feedback
 import androidx.compose.material.icons.rounded.Groups
 import androidx.compose.material.icons.rounded.SettingsBackupRestore
 import androidx.compose.material.icons.rounded.Sync
@@ -91,7 +90,7 @@ fun SettingsRootScreen(
     val appName = remember {
         runCatching {
             context.packageManager.getApplicationLabel(context.applicationInfo).toString()
-        }.getOrDefault("SleepDown课程表")
+        }.getOrDefault("AHMU课程表")
     }
 
     val updateAvailable by GiteeAppUpdater.updateAvailable.collectAsStateWithLifecycle()
@@ -187,15 +186,6 @@ fun SettingsRootScreen(
                     )
                     SettingsDivider(startIndent = 56.dp)
                     SettingsNavigationRow(
-                        "自动刷新课表",
-                        leadingIcon = Icons.Rounded.Sync,
-                        leadingIconTint = ComposeColor(0xFF34C759),
-                        badgeText = "实验功能",
-                        selected = selectedPage == SettingsPage.AutoRefreshSchedule,
-                        minHeight = 52.dp, onClick = { onPageChange(SettingsPage.AutoRefreshSchedule) }
-                    )
-                    SettingsDivider(startIndent = 56.dp)
-                    SettingsNavigationRow(
                         "班级课表",
                         leadingIcon = Icons.Rounded.Groups,
                         leadingIconTint = ComposeColor(0xFF34C759),
@@ -218,46 +208,11 @@ fun SettingsRootScreen(
         item {
                 SettingsGroup(backdrop = backdrop, config = state.config, modifier = Modifier.fillMaxWidth().homeSwitchGroup()) {
                     SettingsNavigationRow(
-                        "AI 设置",
-                        leadingIcon = CouiIcons.Filled.AI,
-                        leadingIconTint = ComposeColor.Unspecified,
-                        selected = selectedPage == SettingsPage.AiImport,
-                        minHeight = 52.dp, onClick = { onPageChange(SettingsPage.AiImport) }
-                    )
-                    SettingsDivider(startIndent = 56.dp)
-                    SettingsNavigationRow(
-                        "AI 助理",
-                        leadingIcon = CouiIcons.Filled.Headset,
-                        leadingIconTint = ComposeColor(0xFF00A9C7),
-                        selected = selectedPage == SettingsPage.DayAgent,
-                        minHeight = 52.dp, onClick = { onPageChange(SettingsPage.DayAgent) }
-                    )
-                }
-        }
-        item {
-                SettingsGroup(backdrop = backdrop, config = state.config, modifier = Modifier.fillMaxWidth().homeSwitchGroup()) {
-                    SettingsNavigationRow(
                         "备份与恢复",
                         leadingIcon = Icons.Rounded.SettingsBackupRestore,
                         leadingIconTint = ComposeColor(0xFF0A84FF),
                         selected = selectedPage == SettingsPage.BackupRestore,
                         minHeight = 52.dp, onClick = { onPageChange(SettingsPage.BackupRestore) }
-                    )
-                    SettingsDivider(startIndent = 56.dp)
-                    SettingsNavigationRow(
-                        "捐赠支持",
-                        leadingIcon = Icons.Rounded.Favorite,
-                        leadingIconTint = ComposeColor(0xFFFF2D55),
-                        selected = selectedPage == SettingsPage.Donate,
-                        minHeight = 52.dp, onClick = { onPageChange(SettingsPage.Donate) }
-                    )
-                    SettingsDivider(startIndent = 56.dp)
-                    SettingsNavigationRow(
-                        "问题反馈",
-                        leadingIcon = Icons.Rounded.Feedback,
-                        leadingIconTint = ComposeColor(0xFF0A84FF),
-                        selected = selectedPage == SettingsPage.Feedback,
-                        minHeight = 52.dp, onClick = { onPageChange(SettingsPage.Feedback) }
                     )
                 }
         }

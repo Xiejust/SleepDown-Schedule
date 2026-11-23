@@ -126,6 +126,7 @@ object AppIconManager {
     private const val StyleKey = "style"
     private const val FollowsSystemDarkModeKey = "follows_system_dark_mode"
     private const val DarkThemeKey = "dark_theme"
+    private const val AppliedIconResIdKey = "applied_icon_res_id"
     private var lastAppliedIconResId: Int? = null
     internal var onIconApplied: ((changed: Boolean) -> Unit)? = null
 
@@ -225,8 +226,10 @@ object AppIconManager {
             }
         setAliasEnabled(packageManager, context, desired, enabled = true)
         val iconResId = currentIconResId(context)
-        val changed = lastAppliedIconResId != iconResId
+        val storedResId = preferences.getInt(AppliedIconResIdKey, 0)
+        val changed = storedResId != iconResId
         lastAppliedIconResId = iconResId
+        if (changed) preferences.edit { putInt(AppliedIconResIdKey, iconResId) }
         onIconApplied?.invoke(changed)
     }
 

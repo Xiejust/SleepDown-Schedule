@@ -4,11 +4,6 @@ import com.xiaomanjun.sleepdownschedule.domain.schedule.withCustomCourseTimetabl
 
 import androidx.room.withTransaction
 import com.xiaomanjun.sleepdownschedule.*
-import com.xiaomanjun.sleepdownschedule.domain.agent.AgentPlan
-import com.xiaomanjun.sleepdownschedule.domain.agent.AgentPlanExecutionResult
-import com.xiaomanjun.sleepdownschedule.domain.agent.AgentPlanRejectedException
-import com.xiaomanjun.sleepdownschedule.domain.agent.prepareAgentCoursePlan
-import com.xiaomanjun.sleepdownschedule.domain.agent.verifyAgentPlan
 import com.xiaomanjun.sleepdownschedule.domain.course.conflictsWith
 import com.xiaomanjun.sleepdownschedule.domain.schedule.CourseAlignmentImpact
 import com.xiaomanjun.sleepdownschedule.domain.schedule.PeriodTimelineSession
@@ -41,9 +36,6 @@ import com.xiaomanjun.sleepdownschedule.model.PeriodAlignmentMode
 import com.xiaomanjun.sleepdownschedule.model.TimetableComboEntity
 import com.xiaomanjun.sleepdownschedule.model.TimetableDateRuleEntity
 import com.xiaomanjun.sleepdownschedule.model.courseNameGroupKey
-import com.xiaomanjun.sleepdownschedule.model.agent.AgentActionScope
-import com.xiaomanjun.sleepdownschedule.model.agent.AgentValidatedAction
-import com.xiaomanjun.sleepdownschedule.model.agent.AgentValidatedActionType
 import com.xiaomanjun.sleepdownschedule.model.withImportedCourseCardDefaults
 import java.time.LocalDate
 import kotlinx.coroutines.flow.combine
@@ -51,6 +43,16 @@ import kotlinx.coroutines.flow.distinctUntilChanged
 import kotlinx.coroutines.flow.filterNotNull
 import kotlinx.coroutines.flow.flatMapLatest
 import kotlinx.coroutines.flow.map
+
+/** Built-in timetable used by builds before the 11-period default replaced it. */
+private val LegacyDefaultPeriodTimes = listOf(
+    Triple(1, "08:00", "08:45"), Triple(2, "08:55", "09:40"),
+    Triple(3, "10:00", "10:45"), Triple(4, "10:55", "11:40"),
+    Triple(5, "14:00", "14:45"), Triple(6, "14:55", "15:40"),
+    Triple(7, "16:00", "16:45"), Triple(8, "16:55", "17:40"),
+    Triple(9, "19:00", "19:45"), Triple(10, "19:55", "20:40"),
+    Triple(11, "20:50", "21:35"), Triple(12, "21:45", "22:30")
+)
 
 private data class MultiScheduleSnapshot(
     val courses: List<CourseEntity>,
@@ -642,6 +644,7 @@ class ScheduleRepository(private val database: AppDatabase) {
             }
             profileDao.getProfiles().forEach { profile ->
                 ensureScheduleData(profile.id)
+                upgradeLegacyDefaultTimetable(profile.id)
             }
         }
     }
@@ -830,105 +833,6 @@ class ScheduleRepository(private val database: AppDatabase) {
                 else courseDao.updateCourse(course.copy(weeks = remainingWeeks))
             }
             mergeCompatibleCourseFragments(scheduleId)
-        }
-    }
-
-    suspend fun commitAgentSettingPlan(
-        before: AppState,
-        config: ScheduleConfigEntity,
-        periods: List<PeriodEntity>,
-        schemes: SchedulePeriodSchemesDraft?,
-        name: String?,
-        courseActions: List<AgentValidatedAction>
-    ): Pair<AgentPlanExecutionResult, AppState> = database.withTransaction {
-        val current = snapshot()
-        require(current.config == before.config && current.periods == before.periods && current.courses == before.courses) {
-            "课表在确认期间发生变化，请重新生成计划"
-        }
-        // The explicit plan owns course migrations. Temporarily detach its rows inside this same
-        // transaction so detail COW cannot remap them a second time or reject a planned deletion.
-        // Any later plan failure rolls the complete transaction back, including the public copy.
-        if (courseActions.isNotEmpty()) courseDao.deleteBySchedule(config.id)
-        schemes?.let { saveScheduleDetail(config, it) }
-            ?: saveConfigForSchedule(config.id, config, periods)
-        if (courseActions.isNotEmpty()) courseDao.insertCourses(current.courses.map { it.originalArrangement() })
-        name?.let { renameSchedule(config.id, it) }
-        val result = if (courseActions.isEmpty()) AgentPlanExecutionResult(true, null, true, "设置已保存")
-            else executeAgentPlan(AgentPlan(courseActions)).also { check(it.success && it.verified) { it.message } }
-        val stored = snapshot()
-        val indexes = stored.periods.map { it.periodIndex }.toSet()
-        require(stored.courses.all { course ->
-            course.originalArrangement().periods.isNotEmpty() && course.periods.all { it in indexes } &&
-                course.weeks.all { it in 1..stored.config.totalWeeks }
-        }) { "新设置会使课程周次或节次越界，请在同一计划中调整受影响课程" }
-        val oldById = before.courses.associateBy { it.id }
-        val retained = stored.courses.filter { it.id in oldById }
-        require(retained.indices.none { i -> (i+1 until retained.size).any { j ->
-            retained[i].weeks.any { week -> retained[i].conflictsWith(retained[j],week,stored.periods) &&
-                !oldById.getValue(retained[i].id).conflictsWith(oldById.getValue(retained[j].id),week,before.periods) }
-        } }) { "新设置产生时间冲突，请在同一计划中调整课程" }
-        result to stored
-    }
-
-    suspend fun restoreAgentSettingPlan(
-        expected: AppState, before: AppState, schemes: SchedulePeriodSchemesDraft, name: String?
-    ) = database.withTransaction {
-        val current = snapshot()
-        require(current.config == expected.config && current.periods == expected.periods && current.courses == expected.courses) {
-            "课表已有后续修改，无法覆盖撤销"
-        }
-        // Undo re-selects the previous public identity; it never rewrites that shared record.
-        courseDao.deleteBySchedule(before.config.id)
-        saveScheduleDetail(before.config, schemes.copy(topologyOperations = emptyList(),
-            originalActiveSchemeId = current.config.activePeriodSchemeId))
-        courseDao.insertCourses(before.courses.map { it.originalArrangement() })
-        name?.let { renameSchedule(before.config.id, it) }
-    }
-
-    suspend fun executeAgentPlan(plan: AgentPlan): AgentPlanExecutionResult {
-        return runCatching {
-            database.withTransaction {
-                val scheduleId = activeScheduleId()
-                val before = courseDao.getCourses(scheduleId)
-                val config = configDao.getConfig(scheduleId) ?: error("课表配置不存在")
-                val periodDefinitions = configDao.getPeriods(scheduleId)
-                val prepared = prepareAgentCoursePlan(plan, scheduleId, before, config, periodDefinitions)
-                prepared.replacements.forEach { (id, fragments) ->
-                    if (fragments.isEmpty()) courseDao.deleteCourse(id)
-                    else {
-                        // Fragment clocks were prepared against their logical source selection.
-                        // Reuse the physical ID only after normalization, so retained lessons are
-                        // not mistaken for an explicit edit of the old whole-course arrangement.
-                        val normalized = normalizeCoursesForSchedule(fragments.map { it.copy(id = 0) },
-                            scheduleId, periodDefinitions)
-                        courseDao.updateCourse(normalized.first().copy(id = id))
-                        normalized.drop(1).forEach { fragment ->
-                            courseDao.insertCourse(fragment)
-                        }
-                    }
-                }
-                prepared.additions.forEach { course ->
-                    courseDao.insertCourse(normalizeCoursesForSchedule(listOf(course.copy(id = 0)), scheduleId, periodDefinitions).single())
-                }
-                mergeCompatibleCourseFragments(scheduleId)
-                val after = courseDao.getCourses(scheduleId)
-                if (!verifyAgentPlan(after, plan, before, periodDefinitions)) {
-                    throw AgentPlanRejectedException("数据库写入后的真实状态与操作计划不一致")
-                }
-                AgentPlanExecutionResult(
-                    success = true,
-                    preview = prepared.preview,
-                    verified = true,
-                    message = "操作已完成并验证"
-                )
-            }
-        }.getOrElse { error ->
-            AgentPlanExecutionResult(
-                success = false,
-                preview = null,
-                verified = false,
-                message = error.message ?: "操作失败，所有修改已回滚"
-            )
         }
     }
 
@@ -1386,6 +1290,34 @@ class ScheduleRepository(private val database: AppDatabase) {
         val repaired = normalizeConfigForSchedule(configWithCountsFromPeriods(config ?: defaultConfig(scheduleId), periods), scheduleId)
         configDao.upsertConfig(repaired)
         replaceSchemesWithPeriods(scheduleId, repaired, periods, "默认作息")
+    }
+
+    /**
+     * Older builds shipped a 12-period timetable as the built-in default. Replace it with the
+     * current 11-period default once, but only when the schedule still carries that untouched
+     * default (no migrated courses on the removed period), so imported timetables are never
+     * overwritten.
+     */
+    private suspend fun upgradeLegacyDefaultTimetable(scheduleId: Int) {
+        val config = configDao.getConfig(scheduleId) ?: return
+        val periods = configDao.getPeriods(scheduleId).sortedBy { it.periodIndex }
+        val isLegacyDefault = periods.size == LegacyDefaultPeriodTimes.size &&
+            periods.zip(LegacyDefaultPeriodTimes).all { (period, times) ->
+                period.periodIndex == times.first && period.startTime == times.second &&
+                    period.endTime == times.third
+            }
+        if (!isLegacyDefault) return
+        if (courseDao.getCourses(scheduleId).any { 12 in it.periods }) return
+        val upgraded = defaultPeriods(scheduleId)
+        val repaired = normalizeConfigForSchedule(
+            configWithCountsFromPeriods(
+                config.copy(classDurationMinutes = 40, breakDurationMinutes = 10),
+                upgraded
+            ),
+            scheduleId
+        )
+        configDao.upsertConfig(repaired)
+        replaceSchemesWithPeriods(scheduleId, repaired, upgraded, "默认作息")
     }
 
     private fun samePeriodTimeline(left: List<PeriodEntity>, right: List<PeriodEntity>): Boolean {

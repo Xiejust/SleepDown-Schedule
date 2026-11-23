@@ -31,7 +31,9 @@ data class EffectiveMaterialPolicy(val level: AppMaterialLevel) {
 /** Device-wide rendering preference; schedule appearance values remain intact. */
 object AppMaterialPreferences {
     private const val Prefs = "app_material_preferences"
-    var level by mutableStateOf(AppMaterialLevel.QUALITY)
+    // PERFORMANCE keeps the glass look but skips the most expensive progressive blur work,
+    // which is the main cause of scrolling/week-switch jank on mid-range phones.
+    var level by mutableStateOf(AppMaterialLevel.PERFORMANCE)
         private set
     val isPerformance: Boolean get() = level == AppMaterialLevel.PERFORMANCE
     val isSuperPerformance: Boolean get() = level == AppMaterialLevel.SUPER_PERFORMANCE
@@ -39,7 +41,7 @@ object AppMaterialPreferences {
 
     fun load(context: Context) {
         val saved = context.getSharedPreferences(Prefs, Context.MODE_PRIVATE).getString("level", null)
-        level = AppMaterialLevel.entries.firstOrNull { it.name == saved } ?: AppMaterialLevel.QUALITY
+        level = AppMaterialLevel.entries.firstOrNull { it.name == saved } ?: AppMaterialLevel.PERFORMANCE
     }
 
     fun setLevel(context: Context, value: AppMaterialLevel) {
